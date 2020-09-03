@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "node_modules":true,
+        ".vscode":true,
+        "dist":true,
+        "e2e":true,
+        "tsconfig.json":true,
+        "package-lock.json":true,
+    }
+}

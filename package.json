@@ -1,0 +1,35 @@
+{
+  "name": "url5",
+  "version": "0.0.0",
+  "description": "shortener links",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "nodemon src/app.ts",
+    "build": "tsc -p ."
+  },
+  "author": "ahmed nageeb mahmoud",
+  "license": "ISC",
+  "dependencies": {
+    "@types/formidable": "^1.0.31",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "formidable": "^1.2.2",
+    "google-auth-library": "^6.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongodb": "^3.5.7",
+    "password-hash": "^1.2.2"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.0",
+    "@types/express": "^4.17.6",
+    "@types/jsonwebtoken": "^8.5.0",
+    "@types/mongodb": "^3.5.18",
+    "@types/node": "^14.0.5",
+    "@types/password-hash": "^1.2.20",
+    "nodemon": "^2.0.4",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
+  }
+}
+

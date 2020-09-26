@@ -61,7 +61,23 @@ export interface IResource {
     secounds:string;
     videoIsNotFound:string;
     videosAreNotFound:string;
+    codeSentSuccessfully:string;
+    iCanNotSendCodeToYoureEmail:string;
 
+    codeIsInvalid:string;
+    codeIsValid:string;
+    removedVideoFromFavoriteList:string;
+    removedVideoFromNotLoveList:string;
+    removedVideoFromLoveList:string;
+    noMoreVideos:string;
+
+
+    removedPostFromLoveList:string;
+    removedPostFromNotLoveList:string;
+    removedPostFromFavoriteList:string;
+
+    noVideosFound:string;
+    noPostsFound:string;
 
 
 

@@ -1,34 +1,58 @@
-import express, { Request, Response, Router } from 'express';
+import { Router } from 'express';
 import { AuthGuardService } from '../services/auth.guard.service';
 import { VideoController } from '../controllers/videos.controller';
 
-const videosRouter = Router();
-const cont = new VideoController();
+const cont = new VideoController(),
+    r = Router();
+
 
 /** Generate New Landing Page Id For Add New Video : api/video/generateNewLandingPageId   */
-videosRouter.get('/generateNewLandingPageId', cont.generateNewLandingPageId);
+r.get('/generateNewLandingPageId', cont.generateNewLandingPageId);
 
 
 /** Get Top Videos For Display In Videos Page : api/video/getTopVideos   */
-videosRouter.get('/getTopVideos', cont.getTopVideos);
+r.get('/getTopVideos', cont.getTopVideos);
 
 /** Get Videos FBy Category Id : api/video/getTopVideos   */
-videosRouter.get('/getVideosByCategoryId/:vidoeCategoryId', cont.getVideosByCategoryId);
+r.get('/getVideosByCategoryId/:vidoeCategoryId', cont.getVideosByCategoryId);
 
 
 /** Get Video Details For Display : api/video/getVideoDetailsForDisplay   */
-videosRouter.get('/getVideoDetailsForDisplay/:videoId', cont.getVideoDetailsForDisplay);
+r.get('/getVideoDetailsForDisplay/:videoId', cont.getVideoDetailsForDisplay);
 
 
+
+
+
+/** Current User Remove Love : api/video/remove/love   */
+r.put('/activities/love/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityLove);
+
+/** Current User Remove Not Love : api/video/remove/notLove   */
+r.put('/activities/notLove/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityNotLove);
+
+/** Current User Remove Favorite : api/video/remove/favorite   */
+r.put('/activities/favorite/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityFavorite);
 
 /** Current User Make Love : api/video/love   */
-videosRouter.post('/love/:id', AuthGuardService.checkIfAuthrized, cont.love);
+r.post('/activities/love/:id/:isWasNotLove', AuthGuardService.checkIfAuthrized, cont.addActivityLove);
 
 /** Current User Make Not Love : api/video/notLove   */
-videosRouter.post('/notove/:id', AuthGuardService.checkIfAuthrized, cont.notLove);
+r.post('/activities/notLove/:id/:isWasLove', AuthGuardService.checkIfAuthrized, cont.addActivityNotLove);
 
 /** Current User Make Favorite : api/video/favorite   */
-videosRouter.post('/favorite/:id', AuthGuardService.checkIfAuthrized, cont.favorite);
+r.post('/activities/favorite/:id', AuthGuardService.checkIfAuthrized, cont.addActivityFavorite);
 
 
-export { videosRouter };
+
+
+
+/** Get Videos Current User Loved : api/video/activities/love/:skip/:limit   */
+r.get('/activities/love/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getVideosActivitiesLoved);
+
+/** Get Videos Current User Not Loved : api/video/activities/notLove/:skip/:limit   */
+r.get('/activities/notLove/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getVideosActivitiesNotLoved);
+
+/** Get Videos Current User Favorite : api/video/activities/favorite/:skip/:limit   */
+r.get('/activities/favorite/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getVideosActivitiesFavorite);
+
+export { r as videosRouter }

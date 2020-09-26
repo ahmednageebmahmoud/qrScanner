@@ -8,8 +8,8 @@ export class ResponseModel {
         return new ResponseModel(ResponseTypeEnum.error, message, false, null, exp);
     }
 
-    static info(message: string, exp: any = null): ResponseModel {
-        return new ResponseModel(ResponseTypeEnum.info, message, false, null, exp);
+    static info(message: string, noMoreOfResult: boolean = null): ResponseModel {
+        return new ResponseModel(ResponseTypeEnum.info, message, false, null,null,noMoreOfResult);
     }
 
     static unauthorized(message: string): ResponseModel {
@@ -22,7 +22,7 @@ export class ResponseModel {
 
 
     constructor(public responseType: number, public message: string,
-        public isSuucess: boolean, public result: any = null, public exeption: any = null) {
+        public isSuucess: boolean, public result: any = null, public exeption: any = null,public noMoreOfResult:boolean=null) {
 
     }
 

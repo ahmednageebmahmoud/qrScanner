@@ -63,7 +63,7 @@ export class BasicModule {
      * @param responseCode 
      */
     end_successfully(mesage: string = this.resource.successfully, data: any = null, responseCode: number = HttpCodes.ok): void {
-        this.res.status(responseCode).json(ResponseModel.success(mesage, data));
+        this.res.status(responseCode).json(ResponseModel.success(mesage, data)).end();
     }
 
     /**
@@ -71,13 +71,13 @@ export class BasicModule {
       * @param mesage 
       * @param responseCode 
       */
-    end_info(mesage: string): void {
-        this.res.status(HttpCodes.ok).json(ResponseModel.info(mesage));
+    end_info(mesage: string,noMoreOfResult:boolean=null): void {
+        this.res.status(HttpCodes.ok).json(ResponseModel.info(mesage,noMoreOfResult)).end();
     }
 
     /**
      * Fill Logged User Data
-     */
+     */    
     fillLoggedUserData(): void {
         this.loggedUser = this.res.locals[config.loggedUerInformation];
     }
@@ -118,6 +118,8 @@ export class BasicModule {
      * @param bs 
      */
     catchError2(exp: any, bs: BasicModule) {
+        console.log('catchError2',exp);
+        
         bs.res.status(HttpCodes.badRequest).json(ResponseModel.error(bs.resource.someErrorHasBeen, exp.toString()));
     }
 }//End Class

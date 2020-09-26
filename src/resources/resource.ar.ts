@@ -40,35 +40,49 @@ export class ResourceAr implements IResource {
     iCouldNotSavePostImage = "لم استطيع حفظ صورة الموضوع";
 
 
-    justNow="الآت";
-    ago="منذ";
-    oneYear="عام واحد";
-    towYears="عامين";
-    years="اعوام";
-    oneMonth="شهر واحد";
-    towMonths="شهرين";
-    months="اشهر";
-    oneDay="يوم";
-    towDays="يومان";
-    days="ايام";
-    oneHour="ساعة واحدة";
-    towHours="ساعتان";
-    hours="ساعات";
-    oneMinute="دقيقة";
-    towMinutes="دقيقتين";
-    minutes="دقائق";
-    oneSecound="ثانية";
-    towSecounds="ثانيتين";
-    secounds="ثوانى";
+    justNow = "الآت";
+    ago = "منذ";
+    oneYear = "عام واحد";
+    towYears = "عامين";
+    years = "اعوام";
+    oneMonth = "شهر واحد";
+    towMonths = "شهرين";
+    months = "اشهر";
+    oneDay = "يوم";
+    towDays = "يومان";
+    days = "ايام";
+    oneHour = "ساعة واحدة";
+    towHours = "ساعتان";
+    hours = "ساعات";
+    oneMinute = "دقيقة";
+    towMinutes = "دقيقتين";
+    minutes = "دقائق";
+    oneSecound = "ثانية";
+    towSecounds = "ثانيتين";
+    secounds = "ثوانى";
 
-    videoIsNotFound="لم يتم العثور على الفديو";
+    videoIsNotFound = "لم يتم العثور على الفديو";
 
-    videosAreNotFound="لم يتم العثور على مقاطع الفديو";
+    videosAreNotFound = "لم يتم العثور على مقاطع الفديو";
+    codeSentSuccessfully = "تم ارسال بنجاح";
+    iCanNotSendCodeToYoureEmail = "لم اتمكن من ارسال الكود الى الاميل الخاص بك";
+
+    codeIsInvalid="الكود غير صالح";
+    codeIsValid="كود صالح";
+    removedVideoFromFavoriteList="تمت إزالة الفديو من قائمة المفضلة";
+    removedVideoFromNotLoveList="تمت إزالة الفديو من قائمة الغير محبوبة";
+    removedVideoFromLoveList="لقد تمت إزالة الفديو من قائمة المحبوبة";
+    noMoreVideos="لم يتم العثور على مزيد من مقاطع الفديو";
 
 
 
+    removedPostFromLoveList="تمت إزالة الموضوع من قائمة المفضلة";
+    removedPostFromNotLoveList="تمت إزالة الموضوع من قائمة الغير محبوبة";
+    removedPostFromFavoriteList="لقد تمت إزالة الموضوع من قائمة المحبوبة";
 
 
+    noVideosFound='لم يتم العثور على الفديوهات';
+    noPostsFound='لم يتم العثور على مواضيع';
 
 
 

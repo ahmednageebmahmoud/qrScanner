@@ -8,7 +8,6 @@ import { DashbordInformation } from '../models/dashbord.information';
 import { PostDefaultSettingModel } from '../models/post.default.setting.model';
 import { UserModel } from '../models/user.model';
 import { PostAdvertisemetnModel } from '../models/post.advertisement.model';
-import { PostSeoModel } from '../models/post.seo.model';
 import { FileService } from '../services/file.services';
 import * as formidable from "formidable";
 import * as fs from "fs";
@@ -16,6 +15,13 @@ import * as path from "path";
 import { json } from 'body-parser';
 import { UserService } from '../services/user.service';
 import { DateTimeService } from '../services/date.time.service';
+import { SEOModel } from '../models/seo.model';
+import { VistorModel } from '../models/vistor.model';
+import { Socket } from 'dgram';
+import { SocketIOService } from '../services/socket.io.service';
+import { SocketIOEvents } from '../consts/socket.io.events.const';
+import { ISocketResponse } from '../interfaces/i.socket.response';
+import { ActionModel } from '../models/action.model';
 
 export class PostModule extends BasicModule {
     /**
@@ -92,6 +98,12 @@ export class PostModule extends BasicModule {
                     $push: { postsIds: post._id }
                 });
 
+            //Pass Post Now By Socket To All Language Pages Opne
+            SocketIOService.sendNewPostPublish(post.languageCode, <ISocketResponse>{
+                newPost: post
+            });
+
+            //Return Success Now
             this.end_successfully(this.resource.postCreatedSuccessfully, { landingPageId: post.landingPageId });
         }).catch(this.catchError);
     }
@@ -121,7 +133,7 @@ export class PostModule extends BasicModule {
                 isPublic: post.isPublic,
                 urls: post.urls,
                 advertisement: this.fillAdvertisement(post.advertisement),
-                //  seo: this.fillSeo(post.seo)
+                seo: post.seo
             }
         })
             .then(res => {
@@ -140,50 +152,67 @@ export class PostModule extends BasicModule {
 
     /**
      *  Get Posts For Logged User
-     * @param skip 
-     * @param postlastId Get  Posts Generated Before Last  Post Date Selected 'For Paging'
      */
-    getMyPosts(isPublic: string, isActive: string, limit: number, postlastId: string) {
+    getMyPosts(skip: number, limit: number, filter: PostModel) {
+
+        console.log('filter', filter);
 
         //Filter stage
-        let basicFilterST: any = { $match: { _id: new ObjectId(this.loggedUser._id) } };
+        let postFilter: any = { $match: {} };
 
-        if (isActive == "true" || isActive == "false") basicFilterST["$match"].isActive = isActive;
-        if (isPublic == "true" || isPublic == "false") basicFilterST["$match"].isPublic = isPublic;
+        //Create New Field With Every Document For Filter In Content
+        let addContentField = {
+            $addFields: {
+                contentText: {
+                    //Remove Any Html Tage From Content
+                    $replaceAll: { input: "$post.content", find: /([^<]*>|<)/gmi, replacement: '00' }
+                }
+            }
+        };
 
-        let skipST: any = { $match: {} };
+        postFilter["$match"]["post.isActive"] = filter.isActive.toString() == 'true' ? true : false;
+        postFilter["$match"]["post.isPublic"] = filter.isPublic.toString() == 'true' ? true : false;
+        if (filter.languageCode != 'null') postFilter["$match"]["post.languageCode"] = filter.languageCode;
+        if (filter.url) postFilter["$match"]["post.urls"] = { $in: [filter.url] };
+        if (filter.title) postFilter["$match"]["post.title"] = { "$regex": filter.title, "$options": "igm" };
+        if (filter.content) postFilter["$match"]["$contentText"] = { "$regex": filter.content, "$options": "igm" };
 
-        //Get  Posts Generated Before Last  Post Date Selected 'For Paging'
-        if (postlastId) {
-            skipST["$match"] = { "post.generatedDate": { $lt: new ObjectId(postlastId).getTimestamp() } };
-        }
+        console.log('postFilter', postFilter);
+
 
         this.db.collection(cols.users).aggregate<PostModel>
             ([
-                basicFilterST,
+                { $match: { _id: new ObjectId(this.loggedUser._id) } },
                 { $lookup: { from: "posts", localField: "postsIds", foreignField: "_id", as: "post" } },
                 {
                     $unwind: "$post"
                 },
+                addContentField,
+                postFilter,
                 { $sort: { "post.generatedDate": -1, } },
-                skipST,
+                { $skip: skip },
                 { $limit: limit },
                 {
                     $project: {
                         _id: "$post._id",
                         title: "$post.title",
                         generatedDate: "$post.generatedDate",
+                        languageCode: "$post.languageCode",
+                        isActive: "$post.isActive",
+                        isPublic: "$post.isPublic",
                         counterLove: { $size: "$post.userLoveIds" },
                         counterNotLove: { $size: "$post.userNotLoveIds" },
                         counterFavorite: { $size: "$post.userFavoriteIds" },
+                        landingPageUrl: { $concat: [config.websiteUrl, "/_", "$post.landingPageId"] }
                     }
                 }
             ])
             .toArray().then(res => {
                 //Check From Length
                 if (res.length == 0) {
-                    if (!postlastId)//Check For First Time
-                        return this.end_info(this.resource.iNotFoundAnyPost)
+                    //Check For First Time
+                    if (skip == 0)
+                        return this.end_info(this.resource.noPostsFound)
                     return this.end_info(this.resource.noMorePosts)
                 }
 
@@ -262,11 +291,13 @@ export class PostModule extends BasicModule {
                         urls: 1,
                         landingPageId: 1,
                         photoPath: 1,
+                        seo: 1,
+                        languageCode: 1,
                         isCurrentUserLoved: { $in: [new ObjectId(loggedUserId), "$userLoveIds"] },
                         isCurrentUserNotLoved: { $in: [new ObjectId(loggedUserId), "$userNotLoveIds"] },
                         isCurrentUserFavorited: { $in: [new ObjectId(loggedUserId), "$userFavoriteIds"] },
 
-                    counterLove: { $size: "$userLoveIds" },
+                        counterLove: { $size: "$userLoveIds" },
                         counterNotLove: { $size: "$userNotLoveIds" },
                         counterFavorite: { $size: "$userFavoriteIds" },
 
@@ -288,7 +319,16 @@ export class PostModule extends BasicModule {
                 //Update User Picture Path
                 post.userCreated.picturePath = UserService.getUserPicturePath(post.userCreated);
 
-                this.end_successfully(this.resource.successfully, post);
+                post.currentVistor = { _id: new ObjectId(), isMakeActivityWithPost: false } as VistorModel;
+
+                //Push New Vistor To Post Vistors Arrays
+                this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id) }, {
+                    $push: {
+                        vistors: post.currentVistor
+                    }
+                }).then(re => {
+                    this.end_successfully(this.resource.successfully, post);
+                }).catch(err => this.catchError2(err, this));
             }).catch(err => this.catchError2(err, this));
     }
 
@@ -335,8 +375,9 @@ export class PostModule extends BasicModule {
             skipST["$match"] = { "generatedDate": { $lt: new ObjectId(lastPostId).getTimestamp() } };
         else
             lastPostId = null;
+
         //Project Stage
-        let projectST: any = {
+        let loggedUserId = this.loggedUser?._id, projectST: any = {
             $project: {
                 _id: 1,
                 title: 1,
@@ -347,6 +388,9 @@ export class PostModule extends BasicModule {
                 counterLove: { $size: "$userLoveIds" },
                 counterNotLove: { $size: "$userNotLoveIds" },
                 counterFavorite: { $size: "$userFavoriteIds" },
+                isCurrentUserLoved: { $in: [new ObjectId(loggedUserId), "$userLoveIds"] },
+                isCurrentUserNotLoved: { $in: [new ObjectId(loggedUserId), "$userNotLoveIds"] },
+                isCurrentUserFavorited: { $in: [new ObjectId(loggedUserId), "$userFavoriteIds"] },
 
                 userCreated: {
                     userName: "$userCreated.userName",
@@ -397,14 +441,17 @@ export class PostModule extends BasicModule {
             }).catch(eror => this.catchError2(eror, this));
     }
 
+
     /**
      * Get Last Posts For Landing Page
+     * @param languageCode Language Code Target
      */
-    getLastPosts() {
+    getLastPosts(languageCode: string) {
         let matchST: any = {
             $match: {
+                languageCode: languageCode,
                 isActive: true,
-                isPublic: true
+                isPublic: true,
             }
         };
 
@@ -547,6 +594,7 @@ export class PostModule extends BasicModule {
             //Update Post
             this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) },
                 {
+
                     //Add To Love Array
                     $push: { userLoveIds: new ObjectId(this.loggedUser._id) },
                     //Remove From Not Love Array
@@ -557,12 +605,14 @@ export class PostModule extends BasicModule {
                     else if (!res.modifiedCount)
                         return this.end_successfully(this.resource.loveSuccessfully)
 
+
+
                     //Update User Information
                     this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
                         //Add To Love Array
-                        $push: { postsLoveIds: new ObjectId(id) },
+                        $push: { postsLoveIds: <ActionModel>{ actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } },
                         //Remove From Not Love Array
-                        $pull: { postsNotLoveIds: new ObjectId(id) }
+                        $pull: { postsNotLoveIds: { targetId: new ObjectId(id) } }
                     });
 
                     return this.end_successfully(this.resource.loveSuccessfully)
@@ -597,9 +647,9 @@ export class PostModule extends BasicModule {
                     //Update User Information
                     this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
                         //Add To Not Love Array
-                        $push: { postsNotLoveIds: new ObjectId(id) },
+                        $push: { postsNotLoveIds: <ActionModel>{ actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } },
                         //Remove From Love Array
-                        $pull: { postsLoveIds: new ObjectId(id) }
+                        $pull: { postsLoveIds: { targetId: new ObjectId(id) } }
                     });
                     return this.end_successfully(this.resource.unLoveSuccessfully)
                 }).catch(err => this.catchError2(err, this));
@@ -624,12 +674,12 @@ export class PostModule extends BasicModule {
             if (count) {
                 //Un-Favorite
                 shortQuery = { $pull: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
-                userQuery = { $pull: { postsFavoriteIds: new ObjectId(id) } }
+                userQuery = { $pull: { postsFavoriteIds: { targetId: new ObjectId(id) } } }
             }
             else {
                 //Favorite
                 shortQuery = { $push: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
-                userQuery = { $push: { postsFavoriteIds: new ObjectId(id) } }
+                userQuery = { $push: { postsFavoriteIds: { actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } } }
             }
             //Update Post
             this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, shortQuery).then(res => {
@@ -645,6 +695,30 @@ export class PostModule extends BasicModule {
             }).catch(err => this.catchError2(err, this));
         }).catch(err => this.catchError2(err, this));
 
+    }
+
+    /**
+     * Update Post Vistor To Activity And Save Vistor Information
+     * @param postId 
+     * @param vistorId 
+     */
+    updatePostVistorToActivity(postId: string, vistorId: string): void {
+        let vistor: VistorModel = {
+            _id: new ObjectId(vistorId),
+            isMakeActivityWithPost: true,
+            loggedUserId: this.loggedUser ? new ObjectId(this.loggedUser._id) : null
+            //Another Information Here
+        };
+
+        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(postId) }, {
+            $set: { "vistors.$[v]": vistor }
+        },
+            { arrayFilters: [{ "v._id": new ObjectId(vistorId) }] }
+        ).then(res => {
+            if (!res.modifiedCount)
+                return this.end_failed(this.resource.someErrorHasBeen);
+            return this.end_successfully(this.resource.successfully);
+        }).catch(err => this.catchError2(err, this));
     }
 
 
@@ -678,15 +752,108 @@ export class PostModule extends BasicModule {
     }
 
     /**
-     * Fill Seo 
-     * @param s 
-     */
-    fillSeo(s: PostSeoModel): PostSeoModel {
-        return {
-            title: s.title,
-            description: s.description,
-            keywords: s.keywords
-        };
+      * Get Posts Current User Loved
+      */
+    getPostsActivities(skip: number, limit: number, isLovedVideos: boolean, isNotLovedVideos: boolean = false, isFavoriteVideos: boolean = false) {
+        let localFieldTarget: string, unwindFoeldTarget: string;
+        let sortStage: any = {};
+
+        if (isLovedVideos) {
+            localFieldTarget = "postsLoveIds";
+            sortStage = { $sort: { "postsLoveIds.actionDate": -1 } };
+        }
+        else if (isNotLovedVideos) {
+            localFieldTarget = "postsNotLoveIds";
+            sortStage = { $sort: { "postsNotLoveIds.actionDate": -1 } };
+        }
+        else if (isFavoriteVideos) {
+            localFieldTarget = "postsFavoriteIds";
+            sortStage = { $sort: { "postsFavoriteIds.actionDate": -1 } };
+        }
+
+        unwindFoeldTarget = "$" + localFieldTarget;
+        localFieldTarget = localFieldTarget + ".targetId";
+
+        this.db.collection(cols.users).aggregate<PostModel>([
+            { $match: { "_id": new ObjectId(this.loggedUser._id) } },
+            { $unwind: "$" + localFieldTarget },
+            { $lookup: { from: "posts", localField: localFieldTarget, foreignField: "_id", as: "post" } },
+            { $unwind: "$post" },
+            sortStage,
+            { $skip: skip, },
+            { $limit: limit },
+            {
+                $project: {
+                    _id: "$post._id",
+                    landingPageId: "$post.landingPageId",
+                    title: "$post.title",
+                    counterViews: "$post.counterViews",
+                    counterLove: { $size: "$post.userLoveIds" },
+                    counterNotLove: { $size: "$post.userNotLoveIds" },
+                    counterFavorite: { $size: "$post.userFavoriteIds" },
+                    landingPageUrl: { $concat: [config.websiteUrl, "/_", "$post.landingPageId"] }
+                }
+            }
+        ]).toArray((error, arr) => {
+            if (error)
+                return this.end_failed(this.resource.someErrorHasBeen, error);
+
+            if (arr.length == 0)
+                if (skip == 0)
+                    return this.end_info(this.resource.noPostsFound, true)
+                else
+                    return this.end_info(this.resource.noMorePosts, true)
+            return this.end_successfully(this.resource.successfully, arr);
+        });
     }
+
+    /** Current User Remove Love    */
+    removeActivityLove(id: string) {
+
+        //Remove User Id From Post Loves Arry
+        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userLoveIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Post Id From Uswer Posts Love Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "postsLoveIds": { targetId: new ObjectId(id) } }
+            });
+            return this.end_successfully(this.resource.removedPostFromLoveList);
+        }).catch(c => this.catchError(c));
+    }
+
+    /** Current User Remove Not Love    */
+    removeActivityNotLove(id: string) {
+        //Remove User Id From Post Not Loves Arry
+        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userNotLoveIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Post Id From User Posts Not Love Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "postsNotLoveIds": { targetId: new ObjectId(id) } }
+            });
+            return this.end_successfully(this.resource.removedPostFromNotLoveList);
+        }).catch(c => this.catchError(c));
+    }
+
+    /** Current User Remove Favorite   */
+    removeActivityFavorite(id: string) {
+        //Remove User Id From Post Favorites Arry
+        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userFavoriteIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Post Id From User Posts Favorite Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: {
+                    "postsFavoriteIds": { targetId: new ObjectId(id) }
+                }
+            });
+            return this.end_successfully(this.resource.removedPostFromFavoriteList);
+        }).catch(c => this.catchError(c));
+    }
+
 
 }//End Class

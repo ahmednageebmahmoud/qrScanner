@@ -28,7 +28,7 @@ export class ResourceEn implements IResource {
     noBodyToNow: string = "No Body To Now";
     unFavoriteSuccessfully: string = "Unfavorite Successfully";
     favoriteSuccessfully: string = "Favorite Successfully";
-    unLoveSuccessfully: string = "Unlove Successfully";
+    unLoveSuccessfully: string = "Not love Successfully";
     loveSuccessfully: string = "Love Successfully";
     iCouldNotSaveNewPicture: string = "I Could Not Save New Picture";
     updated: string = "Updated Successfully";
@@ -63,11 +63,25 @@ export class ResourceEn implements IResource {
     videoIsNotFound = "Video Is Not Found";
     videosAreNotFound = "Videos Are Not Found";
 
+    codeSentSuccessfully="Code Sent Successfully";
+    iCanNotSendCodeToYoureEmail="I Can Not Send Code To Youre Email";
+
+    codeIsInvalid="Code Is Invalid";
+    codeIsValid="Code Is Valid";
+    removedVideoFromFavoriteList="Remov Video From Favorite List";
+    removedVideoFromNotLoveList="Remov Video From Not Love List";
+    removedVideoFromLoveList="Removed Video From Love List";
+    noMoreVideos="No More Of Videos";
+
+
+    removedPostFromFavoriteList="Remov Post From Favorite List";
+    removedPostFromNotLoveList="Remov Post From Not Love List";
+    removedPostFromLoveList="Removed Post From Love List";
 
 
 
-
-
+    noVideosFound="No Videos Found";
+    noPostsFound="No Posts Found";
 
 
 

@@ -9,7 +9,7 @@ export class PostController {
      * @param res 
      */
     getPosts(req: Request, res: Response) {
-        new PostModule(req, res).getPosts( +req.params.limit, req.params.lastPostId,req.params.postLanguageCode,req.params.currentUserAction, req.params.createdUserName);
+        new PostModule(req, res).getPosts(+req.params.limit, req.params.lastPostId, req.params.postLanguageCode, req.params.currentUserAction, req.params.createdUserName);
     }
 
     /**
@@ -18,8 +18,8 @@ export class PostController {
      * @param res 
      */
     getLastPosts(req: Request, res: Response) {
-        new PostModule(req, res).getLastPosts();
-    }   
+        new PostModule(req, res).getLastPosts(req.params.languageCode);
+    }
 
 
     /**
@@ -28,7 +28,7 @@ export class PostController {
      * @param res 
      */
     getPostsLoveThere(req: Request, res: Response) {
-        new PostModule(req, res).getPostsLoveThere(+req.params.limit,req.params.lastPostId);
+        new PostModule(req, res).getPostsLoveThere(+req.params.limit, req.params.lastPostId);
     }
 
     /**
@@ -37,7 +37,7 @@ export class PostController {
      * @param res 
      */
     getPostsNotLoveThere(req: Request, res: Response) {
-        new PostModule(req, res).getPostsNotLoveThere(+req.params.limit,req.params.lastPostId);
+        new PostModule(req, res).getPostsNotLoveThere(+req.params.limit, req.params.lastPostId);
     }
 
 
@@ -47,10 +47,10 @@ export class PostController {
      * @param res 
      */
     getPostsFavoriteThere(req: Request, res: Response) {
-        new PostModule(req, res).getPostsFavoriteThere(+req.params.limit,req.params.lastPostId);
+        new PostModule(req, res).getPostsFavoriteThere(+req.params.limit, req.params.lastPostId);
     }
 
-    
+
     /**
      * Current User Make Love
      * @param req 
@@ -85,7 +85,7 @@ export class PostController {
         }
   */
 
-    
+
     /**
      * Get Shortner For Landing Page
      * @param req 
@@ -95,11 +95,11 @@ export class PostController {
         new PostModule(req, res).getPostDetails(req.params.id);
     }
 
-        /**
-     *  Create New Post 
-     * @param req 
-     * @param res 
-     */
+    /**
+ *  Create New Post 
+ * @param req 
+ * @param res 
+ */
     create(req: Request, res: Response) {
         new PostModule(req, res).create();
     }
@@ -120,8 +120,7 @@ export class PostController {
      * @param res 
      */
     getMyPosts(req: Request, res: Response) {
-        new PostModule(req, res).getMyPosts(req.params.isPublic,
-            req.params.isActive, +req.params.limit, req.params.lastPostId);
+        new PostModule(req, res).getMyPosts(+req.params.skip, +req.params.limit, req.body);
     }
 
 
@@ -134,4 +133,56 @@ export class PostController {
     updateDefultSetting(req: Request, res: Response) {
         new PostModule(req, res).updateDefultSetting(req.params.isApplyOnLastPosts, req.body);
     }
+
+
+
+    /**
+     * Update Post Vistor To Activity
+     * @param req 
+     * @param res 
+     */
+    updatePostVistorToActivity(req: Request, res: Response) {
+        new PostModule(req, res).updatePostVistorToActivity(req.params.postId, req.params.vistorId);
+    }
+
+
+
+
+    /**
+     *  Get Posts Current User Loved
+     */
+    getPostsActivitiesLoved(req: Request, res: Response) {
+        new PostModule(req, res).getPostsActivities(+req.params.skip, +req.params.limit, true);
+    }
+    /**
+     *  Get Posts Current User Not Loved
+     */
+    getPostsActivitiesNotLoved(req: Request, res: Response) {
+        new PostModule(req, res).getPostsActivities(+req.params.skip, +req.params.limit, false, true);
+    }
+
+    /**
+     *  Get Posts Current User Favorite
+     */
+    getPostsActivitiesFavorite(req: Request, res: Response) {
+        new PostModule(req, res).getPostsActivities(+req.params.skip, +req.params.limit, false, false, true);
+    }
+
+
+
+    /** Current User Remove Love : api/post/remove/love   */
+    removeActivityLove(req: Request, res: Response) {
+        new PostModule(req, res).removeActivityLove(req.params.id);
+    }
+
+    /** Current User Remove Not Love : api/post/remove/notLove   */
+    removeActivityNotLove(req: Request, res: Response) {
+        new PostModule(req, res).removeActivityNotLove(req.params.id);
+    }
+
+    /** Current User Remove Favorite   */
+    removeActivityFavorite(req: Request, res: Response) {
+        new PostModule(req, res).removeActivityFavorite(req.params.id);
+    }
+
 }//End Class

@@ -1,8 +1,9 @@
 import { ObjectId } from "mongodb";
 import { UserModel } from "./user.model";
 import { PostAdvertisemetnModel } from "./post.advertisement.model";
-import { PostSeoModel } from "./post.seo.model";
 import { FileSaveingModel } from "./file.saveing.model";
+import { SEOModel } from "./seo.model";
+import { VistorModel } from "./vistor.model";
 
 export class PostModel {
     _id: ObjectId;
@@ -27,9 +28,9 @@ export class PostModel {
      */
     generatedDate: Date;
     /** Is Active  */
-    isActive: boolean;
+    isActive: boolean|string;
     /** Is Public : For Display In Posts Page To Any User */
-    isPublic: boolean;
+    isPublic: boolean|string;
     /** Advertisement Setting */
     advertisement: PostAdvertisemetnModel;
     /** 
@@ -57,7 +58,8 @@ export class PostModel {
      */
     userMacAddress: string;
 
-  
+    /** Post Seo */
+    seo:SEOModel;
 
     /** Urls Target */
     urls: string[];
@@ -91,5 +93,16 @@ export class PostModel {
      */
     generatedDateTimeSince:string;
 
+
+/** Post Vistors */
+    vistors:VistorModel[];
+
+    /** Curretn Vistor */
+    currentVistor:VistorModel;
    
+/** Post Landing Page Url */
+    landingPageUrl:string;
+
+    /**Use In Filter */
+    url:string;
 }

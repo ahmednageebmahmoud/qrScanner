@@ -41,7 +41,7 @@ export class VideoController {
         new VideoModule(req, res).getVideoDetailsForDisplay(req.params.videoId);
     }
 
-    
+
     /**
    * Get Top Videos For Display In Videos Page
    *  Get Videos For Videos Page
@@ -57,8 +57,8 @@ export class VideoController {
      * @param req 
      * @param res 
      */
-    love(req: Request, res: Response) {
-        new VideoModule(req, res).love(req.params.id);
+    addActivityLove(req: Request, res: Response) {
+        new VideoModule(req, res).addActivityLove(req.params.id, Boolean(req.params.isWasNotLove));
     }
 
     /**
@@ -66,8 +66,8 @@ export class VideoController {
  * @param req 
  * @param res 
  */
-    notLove(req: Request, res: Response) {
-        new VideoModule(req, res).notLove(req.params.id);
+    addActivityNotLove(req: Request, res: Response) {
+        new VideoModule(req, res).addActivityNotLove(req.params.id, Boolean(req.params.isWasLove));
     }
 
 
@@ -77,9 +77,53 @@ export class VideoController {
  * @param req 
  * @param res 
  */
-    favorite(req: Request, res: Response) {
-        new VideoModule(req, res).favorite(req.params.id);
+    addActivityFavorite(req: Request, res: Response) {
+        new VideoModule(req, res).addActivityFavorite(req.params.id);
     }
+
+
+
+
+    /**
+     *  Get Videos Current User Loved
+     */
+    getVideosActivitiesLoved(req: Request, res: Response) {
+        new VideoModule(req, res).getVideosActivities(+req.params.skip, +req.params.limit,true );
+    }
+    /**
+     *  Get Videos Current User Not Loved
+     */
+    getVideosActivitiesNotLoved(req: Request, res: Response) {
+        new VideoModule(req, res).getVideosActivities(+req.params.skip, +req.params.limit,false,true );
+    }
+
+    /**
+     *  Get Videos Current User Favorite
+     */
+    getVideosActivitiesFavorite(req: Request, res: Response) {
+        new VideoModule(req, res).getVideosActivities(+req.params.skip, +req.params.limit,false,false,true );
+    }
+
+
+
+    /** Current User Remove Love : api/video/remove/love   */
+    removeActivityLove(req: Request, res: Response) {
+        new VideoModule(req, res).removeActivityLove(req.params.id);
+    }
+
+    /** Current User Remove Not Love : api/video/remove/notLove   */
+    removeActivityNotLove(req: Request, res: Response) {
+        new VideoModule(req, res).removeActivityNotLove(req.params.id);
+    }
+
+    /** Current User Remove Favorite   */
+    removeActivityFavorite(req: Request, res: Response) {
+        new VideoModule(req, res).removeActivityFavorite(req.params.id);
+    }
+
+
+
+
 
 
 }//End Class

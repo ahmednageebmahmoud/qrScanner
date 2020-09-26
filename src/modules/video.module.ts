@@ -5,9 +5,13 @@ import { ObjectId } from "mongodb";
 import { VideoModel } from "../models/video.model";
 import { DateTimeService } from "../services/date.time.service";
 import { UserService } from "../services/user.service";
+import { SocketIOService } from "../services/socket.io.service";
+import { SocketIOEvents } from "../consts/socket.io.events.const";
+import { ISocketResponse } from "../interfaces/i.socket.response";
+import { ActionModel } from "../models/action.model";
+import { config } from "../consts/congif.const";
 
 export class VideoModule extends BasicModule {
-
 
     /**
  * New Video Id 
@@ -53,13 +57,13 @@ export class VideoModule extends BasicModule {
    * Add Current User To Love Array In (Videos And User Information Document)
    * @param id 
    */
-    love(id: string) {
+    addActivityLove(id: string, isWasNotLove: boolean) {
         this.db.collection(cols.videos).countDocuments({
             _id: new ObjectId(id),
-            userLoveIds: new ObjectId(this.loggedUser._id)
+            videosLoveIds: new ObjectId(this.loggedUser._id)
         }).then(count => {
             if (count)
-                return this.end_successfully(this.resource.loveSuccessfully)
+                return this.end_info(this.resource.unLoveSuccessfully);
 
             //Update Video
             this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) },
@@ -77,10 +81,19 @@ export class VideoModule extends BasicModule {
                     //Update User Information
                     this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
                         //Add To Love Array
-                        $push: { videosLoveIds: new ObjectId(id) },
+                        $push: { videosLoveIds: <ActionModel>{ actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } },
                         //Remove From Not Love Array
-                        $pull: { videosNotLoveIds: new ObjectId(id) }
+                        $pull: { videosNotLoveIds: { targetId: new ObjectId(id) } }
+                    }).catch();
+
+
+                    //Pass This Love To Cinet Side
+                    SocketIOService.sendVideoAction(id, <ISocketResponse>{
+                        incrementLoveCounter: true,
+                        unIncrementNotLoveCounter: isWasNotLove, //معنى ذالك انة تم حذف عنص ايضا من مصفوفة الغير محبين
+                        fromUserId: this.loggedUser._id
                     });
+
 
                     return this.end_successfully(this.resource.loveSuccessfully)
                 }).catch(err => this.catchError2(err, this));
@@ -93,13 +106,13 @@ export class VideoModule extends BasicModule {
     * Add Current User From Not Love Array  In (Video And User Information Document)
     * @param id 
     */
-    notLove(id: string) {
+    addActivityNotLove(id: string, isWasLove: boolean) {
         this.db.collection(cols.videos).countDocuments({
             _id: new ObjectId(id),
             userNotLoveIds: new ObjectId(this.loggedUser._id)
         }).then(count => {
             if (count)
-                return this.end_successfully(this.resource.unLoveSuccessfully)
+                return this.end_info(this.resource.unLoveSuccessfully);
             //Update Video
             this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) },
                 {
@@ -114,9 +127,18 @@ export class VideoModule extends BasicModule {
                     //Update User Information
                     this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
                         //Add To Not Love Array
-                        $push: { videosNotLoveIds: new ObjectId(id) },
+                        $push: { videosNotLoveIds: <ActionModel>{ actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } },
                         //Remove From Love Array
-                        $pull: { videosLoveIds: new ObjectId(id) }
+                        $pull: { videosLoveIds: { targetId: new ObjectId(id) } }
+                    }).catch();
+
+
+                    //Pass This Not Love To Cinet Side
+                    SocketIOService.sendVideoAction(id, <ISocketResponse>{
+                        incrementNotLoveCounter: true,
+                        unIncrementLoveCounter: isWasLove, //معنى ذالك انة تم حذف عنص ايضا من مصفوفة محبين
+                        fromUserId: this.loggedUser._id
+
                     });
                     return this.end_successfully(this.resource.unLoveSuccessfully)
                 }).catch(err => this.catchError2(err, this));
@@ -127,8 +149,7 @@ export class VideoModule extends BasicModule {
     * Current User Make Favorite Or Un Favorite
     * @param id 
     */
-    favorite(id: string,) {
-
+    addActivityFavorite(id: string,) {
         let videoQuery = {}, userQuery = {};
         this.db.collection(cols.videos).countDocuments({
             _id: new ObjectId(id),
@@ -139,12 +160,12 @@ export class VideoModule extends BasicModule {
             if (count) {
                 //Un-Favorite
                 videoQuery = { $pull: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
-                userQuery = { $pull: { videosFavoriteIds: new ObjectId(id) } }
+                userQuery = { $pull: { videosFavoriteIds: { targetId: new ObjectId(id) } } }
             }
             else {
                 //Favorite
                 videoQuery = { $push: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
-                userQuery = { $push: { videosFavoriteIds: new ObjectId(id) } }
+                userQuery = { $push: { videosFavoriteIds: <ActionModel>{ actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } } }
             }
             //Update Video
             this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) }, videoQuery).then(res => {
@@ -154,7 +175,16 @@ export class VideoModule extends BasicModule {
                     return this.end_successfully(count ? this.resource.unFavoriteSuccessfully : this.resource.favoriteSuccessfully)
 
                 //Update User Information
-                this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, userQuery);
+                this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, userQuery).catch();
+
+
+                //Pass This Favorite To Cinet Side
+                SocketIOService.sendVideoAction(id, <ISocketResponse>{
+                    incrementFavoriteCounter: count == 0,
+                    unIncrementFavoriteCounter: count > 0,
+                    fromUserId: this.loggedUser._id
+
+                });
 
                 return this.end_successfully(count ? this.resource.unFavoriteSuccessfully : this.resource.favoriteSuccessfully)
             }).catch(err => this.catchError2(err, this));
@@ -188,7 +218,7 @@ export class VideoModule extends BasicModule {
                         $push: {
 
                             landingPageId: "$landingPageId",
-                            resourceKey_Title: "$resourceKey_Title",
+                            resourceKey_title: "$resourceKey_title",
                             thumbnailImagePath: "$thumbnailImagePath",
                             counterViews: "$counterViews",
                         }
@@ -212,7 +242,7 @@ export class VideoModule extends BasicModule {
                 $project: {
                     _id: 1,
                     landingPageId: 1,
-                    resourceKey_Title: 1,
+                    resourceKey_title: 1,
                     thumbnailImagePath: 1,
                     counterViews: 1,
                     videoCategoryTypeId: 1
@@ -239,7 +269,7 @@ export class VideoModule extends BasicModule {
                 $project: {
                     _id: 1,
                     landingPageId: 1,
-                    resourceKey_Title: 1,
+                    resourceKey_title: 1,
                     resourceKey_Describtion: 1,
                     resourceKey_keywords: 1,
                     videoPath: 1,
@@ -281,6 +311,62 @@ export class VideoModule extends BasicModule {
     }
 
 
+    /**
+     * Get Videos Current User Loved
+     */
+    getVideosActivities(skip: number, limit: number, isLovedVideos: boolean, isNotLovedVideos: boolean = false, isFavoriteVideos: boolean = false) {
+        let localFieldTarget: string, unwindFoeldTarget: string;
+        let sortStage: any = {};
+        if (isLovedVideos) {
+            localFieldTarget = "videosLoveIds";
+            sortStage = { $sort: { "videosLoveIds.actionDate": -1 } };
+        }
+        else if (isNotLovedVideos) {
+            localFieldTarget = "videosNotLoveIds";
+            sortStage = { $sort: { "videosNotLoveIds.actionDate": -1 } };
+        }
+        else if (isFavoriteVideos) {
+            localFieldTarget = "videosFavoriteIds";
+            sortStage = { $sort: { "videosFavoriteIds.actionDate": -1 } };
+        }
+
+        unwindFoeldTarget = "$" + localFieldTarget;
+        localFieldTarget = localFieldTarget + ".targetId";
+
+        this.db.collection(cols.users).aggregate<VideoModel>([
+            { $match: { "_id": new ObjectId(this.loggedUser._id) } },
+            { $unwind: unwindFoeldTarget },
+            { $lookup: { from: "videos", localField: localFieldTarget, foreignField: "_id", as: "video" } },
+            { $unwind: "$video" },
+            sortStage,
+            { $skip: skip, },
+            { $limit: limit },
+            {
+                $project: {
+                    _id: "$video._id",
+                    landingPageId: "$video.landingPageId",
+                    thumbnailImagePath: { $concat: [config.websiteUrl, "/", "$video.thumbnailImagePath"] },
+                    resourceKey_title: "$video.resourceKey_title",
+                    videoCategoryTypeId: "$video.videoCategoryTypeId",
+                    counterViews: "$video.counterViews",
+                    counterLove: { $size: "$video.userLoveIds" },
+                    counterNotLove: { $size: "$video.userNotLoveIds" },
+                    counterFavorite: { $size: "$video.userFavoriteIds" },
+                }
+            }
+        ]).toArray((error, arr) => {
+
+            if (error)
+                return this.end_failed(this.resource.someErrorHasBeen, error);
+
+            if (arr.length == 0)
+                if (skip == 0)
+                    return this.end_info(this.resource.noVideosFound, true)
+                else
+                    return this.end_info(this.resource.noMoreVideos, true)
+            return this.end_successfully(this.resource.successfully, arr);
+        });
+    }
 
     /**
        * Generate Video Id For Shortn
@@ -292,5 +378,54 @@ export class VideoModule extends BasicModule {
         else
             this.end_successfully(this.resource.successfully, await this.generateNewLandingPageId(this.newVideoLandingId));
     }
+
+
+
+    /** Current User Remove Love    */
+    removeActivityLove(id: string) {
+
+        //Remove User Id From Video Loves Arry
+        this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userLoveIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Video Id From Uswer Videos Love Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "videosLoveIds": { targetId: new ObjectId(id) } }
+            });
+            return this.end_successfully(this.resource.removedVideoFromLoveList);
+        }).catch(c => this.catchError(c));
+    }
+
+    /** Current User Remove Not Love    */
+    removeActivityNotLove(id: string) {
+        //Remove User Id From Video Not Loves Arry
+        this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userNotLoveIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Video Id From User Videos Not Love Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "videosNotLoveIds": { targetId: new ObjectId(id) } }
+            });
+            return this.end_successfully(this.resource.removedVideoFromNotLoveList);
+        }).catch(c => this.catchError(c));
+    }
+
+    /** Current User Remove Favorite   */
+    removeActivityFavorite(id: string) {
+        //Remove User Id From Video Favorites Arry
+        this.db.collection(cols.videos).updateOne({ _id: new ObjectId(id) }, {
+            $pull: { "userFavoriteIds": new ObjectId(this.loggedUser._id) }
+        }).then(res => {
+
+            //Remove Video Id From User Videos Favorite Arry
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "videosFavoriteIds": { targetId: new ObjectId(id) } }
+            });
+            return this.end_successfully(this.resource.removedVideoFromFavoriteList);
+        }).catch(c => this.catchError(c));
+    }
+
 
 }//End Class

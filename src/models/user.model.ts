@@ -1,8 +1,9 @@
 import { ObjectId } from "mongodb"
+import { ActionModel } from "./action.model";
 import { FileSaveingModel } from "./file.saveing.model";
 import { PostDefaultSettingModel } from "./post.default.setting.model";
 
-export class UserModel{
+export class UserModel {
     /**User Id */
     _id: ObjectId;
     /**User Name Fro Login And This Is Uniq  */
@@ -20,20 +21,32 @@ export class UserModel{
     /**Image Url Saved In Server */
     picturePath: string;
     /** Is Cuurent 'Picture Path' From Goggel */
-    isGoogelPicture:boolean;
+    isGoogelPicture: boolean;
     /** New Picture For Update Picture Account  */
-    newPicture:FileSaveingModel;
+    newPicture: FileSaveingModel;
     /**Language Code */
-    languageCode:string;
+    languageCode: string;
     /**Post Default Settings For Used Deafult When Create Shortner Url  */
     postDefaultSettings: PostDefaultSettingModel;
-   
+
     /**All Posts Creatged By This User */
     postsIds: ObjectId[];
     /**All Posts Loved By This User */
-    postsLoveIds: ObjectId[];
+    postsLoveIds: ActionModel[];
     /**All Posts Not Loved By This User */
-    postsNotLoveIds: ObjectId[];
+    postsNotLoveIds: ActionModel[];
     /**All Posts Favorite By This User */
-    postsFavoriteIds: ObjectId[];
-}
+    postsFavoriteIds: ActionModel[];
+
+    /**All Videos Loved By This User */
+    videosLoveIds: ActionModel[];
+    /**All Videos Not Loved By This User */
+    videosNotLoveIds: ActionModel[];
+    /**All Videos Favorite By This User */
+    videosFavoriteIds: ActionModel[];
+
+    /** 
+     * Reset Password Code Sent To User Email
+     */
+    resetPasswordCode: number;
+}//End Class

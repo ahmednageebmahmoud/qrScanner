@@ -14,6 +14,10 @@ import { cpus } from "os";
 import { threadId } from "worker_threads";
 import { isRegExp } from "util";
 import { FileSaveingModel } from "../models/file.saveing.model";
+import { SocketIOService } from "../services/socket.io.service";
+import { SocketIOEvents } from "../consts/socket.io.events.const";
+import { ISocketResponse } from "../interfaces/i.socket.response";
+import { EmailService } from "../services/email.service";
 
 export class UserModule extends BasicModule {
 
@@ -101,11 +105,14 @@ export class UserModule extends BasicModule {
             }).then(up => {
 
                 if (up.modifiedCount == 0) return this.end_info(this.resource.thereAreNoNewModifications);
-               //Update Resources For Reponse   
+                //Update Resources For Reponse   
                 this.fillCurrentResources(userInfo.languageCode);
 
-                
 
+                //Pass This New  Laugage Id For Update In All Pages 
+                SocketIOService.sendUserChangeLanugage(this.loggedUser._id, <ISocketResponse>{
+                    languageCode: userInfo.languageCode,
+                });
                 this.end_successfully(this.resource.updated);
             }).catch(err => this.catchError2(err, this));
         }).catch(err => this.catchError2(err, this));
@@ -123,7 +130,7 @@ export class UserModule extends BasicModule {
         if (!userCreating.userName || !userCreating.email || !userCreating.password)
             return this.end_failed(this.resource.pleaseEnterUserNameAndEmailAndPassword);
 
-        userCreating.userName = userCreating.userName.replace(/[$]|[@]|[/]|[%]|[\^]|[&]|[\*]/gm, '_');
+        userCreating.userName = userCreating.userName;
 
         //Check From User Name Is Dublicated
         if (await this.userNameUsedCount(userCreating.userName) > 0)
@@ -193,7 +200,7 @@ export class UserModule extends BasicModule {
 
                     //Check For SignIn And Return SignIn Information
                     if (user)
-                        return new AuthGuardModule(this.req, this.res).signIn(user,  true);
+                        return new AuthGuardModule(this.req, this.res).signIn(user, true);
 
                     //Now Create New Account And Sign In 
 
@@ -217,7 +224,7 @@ export class UserModule extends BasicModule {
                             return this.end_failed(this.resource.iCanNotRegisterNewAccount);
 
                         //SignIn Now And Return SignIn Information
-                        new AuthGuardModule(this.req, this.res).signIn(newUser,  true);
+                        new AuthGuardModule(this.req, this.res).signIn(newUser, true);
 
                     }).catch(this.catchError);
                 }).catch(this.catchError);
@@ -225,6 +232,71 @@ export class UserModule extends BasicModule {
             }).catch(err => this.catchError2(err, this));
     }
 
+    /**
+     * Send Secret Code To Emial For Create New Password
+     * @param email 
+     */
+    sendSecretCodeToEmailForResetPassword(email: string) {
+
+        let newCode: string = Math.ceil(Math.random() * 9999).toString();
+        let code: number = Number(newCode + "0".repeat(Math.abs(newCode.length - 4)));
+        this.db.collection(cols.users).updateOne({ email }, {
+            $set: {
+                resetPasswordCode: code
+            }
+        }).then(res => {
+            //Check From Account Is Not Found
+            if (!res.modifiedCount)
+                return this.end_failed(this.resource.accountIsNotFound);
+
+            this.db.collection(cols.users).findOne<UserModel>({ email })
+                .then(user => {
+
+                    //Send Code To Email Now
+                    if (EmailService.sendSecretCodeToEmailForResetPassword(user.email, code, user.languageCode))
+                        return this.end_successfully(this.resource.codeSentSuccessfully);
+                    else
+                        return this.end_failed(this.resource.iCanNotSendCodeToYoureEmail);
+
+                }).catch(this.catchError);
+        }).catch(this.catchError);
+    }
+
+
+    /**
+     *  Check From Reset Password Code For Enter New Password
+     */
+    validFroResetPasswordCode(email: string, code: number) {
+        this.db.collection(cols.users).findOne<UserModel>({ email: email, resetPasswordCode: code }).then(res => {
+            //Check If Invlaid Code
+            if (!res)
+                return this.end_failed(this.resource.codeIsInvalid);
+
+            return this.end_successfully(this.resource.codeIsValid);
+        }).catch(this.catchError);
+    }
+
+
+    /**
+     * Reset User Password And SignIn
+     * @param email 
+     * @param password 
+     */
+    resetPasswordAndSignIn(email: string, password: string) {
+        this.db.collection(cols.users).updateOne({ email: email }, {
+            $set: { password: StringHashingService.hash(password) }
+        }).then(res => {
+            //Check If Invlaid Code
+            if (!res.modifiedCount)
+                return this.end_failed(this.resource.accountIsNotFound);
+
+            //Return SignIn Now
+            return this.signInByEmail(<UserSignInModel>{
+                email: email,
+                password: password
+            });
+        }).catch(this.catchError);
+    }
 
     /**
      * Generate New User Name

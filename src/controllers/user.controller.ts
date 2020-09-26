@@ -10,7 +10,7 @@ export class UserController {
      * @param res 
      */
     signUpByEmail(req: Request, res: Response) {
-        new UserModule(req,res).signUp(req.body);
+        new UserModule(req, res).signUp(req.body);
     };
 
     /**
@@ -19,16 +19,16 @@ export class UserController {
      * @param res 
      */
     signInByEmail(req: Request, res: Response) {
-        new UserModule(req,res).signInByEmail(req.body);
+        new UserModule(req, res).signInByEmail(req.body);
     };
-    
-       /**
-     * Sign Up Or Sign In By Googel
-     * @param req 
-     * @param res 
-     */
+
+    /**
+  * Sign Up Or Sign In By Googel
+  * @param req 
+  * @param res 
+  */
     signInByGoogel(req: Request, res: Response) {
-        new UserModule(req,res).signInByGoogel(req.body);
+        new UserModule(req, res).signInByGoogel(req.body);
     };
 
     /**
@@ -37,19 +37,48 @@ export class UserController {
      * @param res 
      */
     update(req: Request, res: Response) {
-        new UserModule(req,res).update(req.body);
+        new UserModule(req, res).update(req.body);
     };
-    
-    
-        /**
-     * Update User Language
+
+
+    /**
+ * Update User Language
+ * @param req 
+ * @param res 
+ */
+    updateLanguage(req: Request, res: Response) {
+        new UserModule(req, res).updateLanguage(req.body);
+    };
+
+
+    /**
+*  Send Secret Code To Emial For Create New Password
+* @param req 
+* @param res 
+*/
+    sendSecretCodeToEmailForResetPassword(req: Request, res: Response) {
+        new UserModule(req, res).sendSecretCodeToEmailForResetPassword(req.params.email);
+    };
+
+
+    /**
+     *  Check From Reset Password Code For Enter New Password
      * @param req 
      * @param res 
      */
-    updateLanguage(req: Request, res: Response) {
-        new UserModule(req,res).updateLanguage(req.body);
+    validFroResetPasswordCode(req: Request, res: Response) {
+        new UserModule(req, res).validFroResetPasswordCode(req.params.email, +req.params.code);
+    };
+
+
+    /**
+     *  Reset User Password And SignIn
+     * @param req 
+     * @param res 
+     */
+    resetPasswordAndSignIn(req: Request, res: Response) {
+        new UserModule(req, res).resetPasswordAndSignIn(req.params.email, req.params.password);
     };
     
-
 
 }//End Class

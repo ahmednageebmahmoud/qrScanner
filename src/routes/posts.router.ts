@@ -1,50 +1,72 @@
-import express, { Request, Response, Router } from 'express';
 import { AuthGuardService } from '../services/auth.guard.service';
+import { Router } from 'express';
 import { PostController } from '../controllers/post.contoleer';
 
-const postsRouter = Router();
-const cont = new PostController();
+const cont = new PostController(),
+    r = Router();
 
 /** Get Posts : api/post/getPosts   */
-postsRouter.get('/getPosts/:limit/:lastPostId?/:postLanguageCode?/:currentUserAction?/:createdUserName?', cont.getPosts);
+r.get('/getPosts/:limit/:lastPostId?/:postLanguageCode?/:currentUserAction?/:createdUserName?', cont.getPosts);
 
-/** Get Last Posts For Landing Page  : api/post/getLastPosts */
-postsRouter.get('/getLastPosts', cont.getLastPosts);
+/** Get Last Posts For Landing Page  : api/post/getLastPosts/:languageCode */
+r.get('/getLastPosts/:languageCode', cont.getLastPosts);
 
-/** Get Posts Current User Love There   : api/post/getPostsLoveThere/:limit/:lastPostId? */
-//postsRouter.get('/getPostsLoveThere/:limit/:lastPostId?', AuthGuardService.checkIfAuthrized, cont.getPostsLoveThere);
-/** Get Posts Current User Not Love There : api/post/getPostsNotLoveThere/:limit/:lastPostId? */
-//postsRouter.get('/getPostsNotLoveThere/:limit/:lastPostId?', AuthGuardService.checkIfAuthrized, cont.getPostsNotLoveThere);
-/** Get Posts Current User Favorite There  : api/post/getPostsFavoriteThere/:limit/:lastPostId? */
-//postsRouter.get('/getPostsFavoriteThere/:limit/:lastPostId?', AuthGuardService.checkIfAuthrized, cont.getPostsFavoriteThere);
 
-/** Current User Make Love : api/post/love   */
-postsRouter.post('/love/:id',AuthGuardService.checkIfAuthrized, cont.love);
-
-/** Current User Make Not Love : api/post/unLove   */
-postsRouter.post('/notLove/:id',AuthGuardService.checkIfAuthrized, cont.notLove);
-
-/** Current User Make Favorite : api/post/favorite   */
-postsRouter.post('/favorite/:id',AuthGuardService.checkIfAuthrized, cont.favorite);
 
 
 /** Get Dashbord Information : api/post/dashbord   */
-//postsRouter.get('/dashbordInfo',AuthGuardService.checkIfAuthrized, cont.dashbordInfo);
+//r.get('/dashbordInfo',AuthGuardService.checkIfAuthrized, cont.dashbordInfo);
 
 /** Get Post Details For Dispaly In Landing Page : api/post/getPostDetails   */
-postsRouter.get('/getPostDetails/:id', cont.getPostDetails);
+r.get('/getPostDetails/:id', cont.getPostDetails);
 
 /** Create New Post : api/post/create   */
-postsRouter.post('/create',AuthGuardService.checkIfAuthrized, cont.create);
+r.post('/create', AuthGuardService.checkIfAuthrized, cont.create);
+
+
+/** Update Post Vistor To Activity : api/post/updatePostVistorToActivity/:postId/:vistorId   */
+r.post('/updatePostVistorToActivity/:postId/:vistorId', cont.updatePostVistorToActivity);
+
 
 /** Update Post  : api/post/update*/
-//postsRouter.put('/update', AuthGuardService.checkIfAuthrized, cont.update);
+//r.put('/update', AuthGuardService.checkIfAuthrized, cont.update);
 
 /** Get Posts For Logged User : api/post/getMyPosts   */
-//postsRouter.get('/getMyPosts/:isPublic/:isActive/:limit/:lastPostId?', AuthGuardService.checkIfAuthrized, cont.getMyPosts);
+r.post('/getMyPosts/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getMyPosts);
 
 /** Update Defualt Setting For posts : api/post/updateDefaultSetting/:isApplyOnLastPosts   */
-//postsRouter.put('/updateDefultSetting/:isApplyOnLastPosts', AuthGuardService.checkIfAuthrized, cont.updateDefultSetting);
+//r.put('/updateDefultSetting/:isApplyOnLastPosts', AuthGuardService.checkIfAuthrized, cont.updateDefultSetting);
 
-//Export Now
-export { postsRouter };
+
+
+/** Current User Remove Love : api/post/remove/love   */
+r.put('/activities/love/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityLove);
+
+/** Current User Remove Not Love : api/post/remove/notLove   */
+r.put('/activities/notLove/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityNotLove);
+
+/** Current User Remove Favorite : api/post/remove/favorite   */
+r.put('/activities/favorite/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityFavorite);
+
+/** Current User Make Love : api/post/love   */
+r.post('/activities/love/:id', AuthGuardService.checkIfAuthrized, cont.love);
+
+/** Current User Make Not Love : api/post/unLove   */
+r.post('/activities/notLove/:id', AuthGuardService.checkIfAuthrized, cont.notLove);
+
+/** Current User Make Favorite : api/post/favorite   */
+r.post('/activities/favorite/:id', AuthGuardService.checkIfAuthrized, cont.favorite);
+
+
+
+
+/** Get Posts Current User Loved : api/post/activities/love/:skip/:limit   */
+r.get('/activities/love/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getPostsActivitiesLoved);
+
+/** Get Posts Current User Not Loved : api/post/activities/notLove/:skip/:limit   */
+r.get('/activities/notLove/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getPostsActivitiesNotLoved);
+
+/** Get Posts Current User Favorite : api/post/activities/favorite/:skip/:limit   */
+r.get('/activities/favorite/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getPostsActivitiesFavorite);
+
+export { r as postsRouter }

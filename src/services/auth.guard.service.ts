@@ -11,6 +11,7 @@ export class AuthGuardService {
    * Chrck If User Logged .. And This Called Only With Apis Must Be Authrized
    */
     static checkIfAuthrized(req: Request, res: Response, next: NextFunction) {
+
         let bsM = new BasicModule(req, res);
         if (!bsM.res.locals||!bsM.res.locals[config.loggedUerInformation]||!bsM.res.locals[config.loggedUerAccessToken]) {
             //Send Status Unauthorized
@@ -26,7 +27,7 @@ export class AuthGuardService {
             //             res.json(ResponseModel.userNotActive)
             //         else
             //             //Success Authrized
-            //             next();
+            //             next(); 
             //     });
         }
     }

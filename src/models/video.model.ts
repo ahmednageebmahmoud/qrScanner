@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { VideoCategoryTypeEnum } from "../consts/video.category.type.const";
+import { SEOModel } from "./seo.model";
 
 export class VideoModel {
 
@@ -7,11 +8,7 @@ export class VideoModel {
   /**Video Landing Page Id */
   landingPageId:string;
   /** Video Title */
-  resourceKey_Title: string;
-  /** Video Describtion For Seo */
-  resourceKey_Describtion: string;
-  /** Video Keywords For Seo */
-  resourceKey_keywords: string;
+  resourceKey_title: string;
   /** Video Path Form Website Or Ant Wahre */
   videoPath: string;
   /** Image Path Form Website Or Ant Wahre */
@@ -53,5 +50,12 @@ export class VideoModel {
 
   /** True: For Show In Videos Page, Else: Not Show In Videos Page */
 isInTop:boolean;
+
+
+  seo: SEOModel;
+
+  /** Post Landing Page Url */
+  landingPageUrl:string;
+
 
 }//End Class

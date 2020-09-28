@@ -43,8 +43,6 @@ export class PostModel {
     /** Post Image Path */
     photoPath: string;
 
-    /** New Post Image   */
-    newImage: FileSaveingModel;
 
     //-+-+-+-+-+-++-+-++-+-+-+-+-+-+-+
 
@@ -105,4 +103,10 @@ export class PostModel {
 
     /**Use In Filter */
     url:string;
+
+    /**Content Without Html Tags */
+    pureContent:string;
+
+    isDeleted:boolean;
 }
+

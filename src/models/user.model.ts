@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb"
 import { ActionModel } from "./action.model";
 import { FileSaveingModel } from "./file.saveing.model";
 import { PostDefaultSettingModel } from "./post.default.setting.model";
+import { PostModel } from "./post.model";
 
 export class UserModel {
     /**User Id */
@@ -29,8 +30,8 @@ export class UserModel {
     /**Post Default Settings For Used Deafult When Create Shortner Url  */
     postDefaultSettings: PostDefaultSettingModel;
 
-    /**All Posts Creatged By This User */
-    postsIds: ObjectId[];
+    /**All Posts Created By This User */
+    posts: PostModel[];
     /**All Posts Loved By This User */
     postsLoveIds: ActionModel[];
     /**All Posts Not Loved By This User */

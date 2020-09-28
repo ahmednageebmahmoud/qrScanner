@@ -63,26 +63,29 @@ export class ResourceEn implements IResource {
     videoIsNotFound = "Video Is Not Found";
     videosAreNotFound = "Videos Are Not Found";
 
-    codeSentSuccessfully="Code Sent Successfully";
-    iCanNotSendCodeToYoureEmail="I Can Not Send Code To Youre Email";
+    codeSentSuccessfully = "Code Sent Successfully";
+    iCanNotSendCodeToYoureEmail = "I Can Not Send Code To Youre Email";
 
-    codeIsInvalid="Code Is Invalid";
-    codeIsValid="Code Is Valid";
-    removedVideoFromFavoriteList="Remov Video From Favorite List";
-    removedVideoFromNotLoveList="Remov Video From Not Love List";
-    removedVideoFromLoveList="Removed Video From Love List";
-    noMoreVideos="No More Of Videos";
-
-
-    removedPostFromFavoriteList="Remov Post From Favorite List";
-    removedPostFromNotLoveList="Remov Post From Not Love List";
-    removedPostFromLoveList="Removed Post From Love List";
+    codeIsInvalid = "Code Is Invalid";
+    codeIsValid = "Code Is Valid";
+    removedVideoFromFavoriteList = "Remov Video From Favorite List";
+    removedVideoFromNotLoveList = "Remov Video From Not Love List";
+    removedVideoFromLoveList = "Removed Video From Love List";
+    noMoreVideos = "No More Of Videos";
 
 
-
-    noVideosFound="No Videos Found";
-    noPostsFound="No Posts Found";
+    removedPostFromFavoriteList = "Remov Post From Favorite List";
+    removedPostFromNotLoveList = "Remov Post From Not Love List";
+    removedPostFromLoveList = "Removed Post From Love List";
 
 
 
-}
+    noVideosFound = "No Videos Found";
+    noPostsFound = "No Posts Found";
+
+    iCantDeleteThePost = 'I Cant Not Delete The Post';
+    deleted = 'Deleted';
+
+
+
+}//End Class

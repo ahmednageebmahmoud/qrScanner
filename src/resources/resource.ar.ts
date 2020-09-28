@@ -84,7 +84,8 @@ export class ResourceAr implements IResource {
     noVideosFound='لم يتم العثور على الفديوهات';
     noPostsFound='لم يتم العثور على مواضيع';
 
-
+    iCantDeleteThePost='لم اتمكن من حذف هذا الموضوع';
+    deleted='تم الحذف';
 
 
 

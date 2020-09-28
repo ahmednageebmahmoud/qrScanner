@@ -22,7 +22,7 @@ export class ResponseModel {
 
 
     constructor(public responseType: number, public message: string,
-        public isSuucess: boolean, public result: any = null, public exeption: any = null,public noMoreOfResult:boolean=null) {
+        public isSuccess: boolean, public result: any = null, public exeption: any = null,public noMoreOfResult:boolean=null) {
 
     }
 

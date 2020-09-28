@@ -105,7 +105,7 @@ export class PostController {
     }
 
     /**
-     * Update Post Link
+     * Update Post  
      * @param req 
      * @param res 
      */
@@ -113,7 +113,16 @@ export class PostController {
         new PostModule(req, res).update(<PostModel>req.body);
     }
 
-
+    
+    /**
+     * Delete Post  
+     * @param req 
+     * @param res 
+     */
+    delete(req: Request, res: Response) {
+        new PostModule(req, res).delete(req.params.id);
+    }
+    
     /**
      * Get Post For Logged User
      * @param req 

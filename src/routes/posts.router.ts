@@ -13,7 +13,6 @@ r.get('/getLastPosts/:languageCode', cont.getLastPosts);
 
 
 
-
 /** Get Dashbord Information : api/post/dashbord   */
 //r.get('/dashbordInfo',AuthGuardService.checkIfAuthrized, cont.dashbordInfo);
 
@@ -22,6 +21,11 @@ r.get('/getPostDetails/:id', cont.getPostDetails);
 
 /** Create New Post : api/post/create   */
 r.post('/create', AuthGuardService.checkIfAuthrized, cont.create);
+
+
+/** Delete Post : api/post/delete/:id   */
+r.delete('/delete/:id', AuthGuardService.checkIfAuthrized, cont.delete);
+
 
 
 /** Update Post Vistor To Activity : api/post/updatePostVistorToActivity/:postId/:vistorId   */

@@ -12,7 +12,7 @@ import { FileService } from '../services/file.services';
 import * as formidable from "formidable";
 import * as fs from "fs";
 import * as path from "path";
-import { json } from 'body-parser';
+import { json, text } from 'body-parser';
 import { UserService } from '../services/user.service';
 import { DateTimeService } from '../services/date.time.service';
 import { SEOModel } from '../models/seo.model';
@@ -22,6 +22,7 @@ import { SocketIOService } from '../services/socket.io.service';
 import { SocketIOEvents } from '../consts/socket.io.events.const';
 import { ISocketResponse } from '../interfaces/i.socket.response';
 import { ActionModel } from '../models/action.model';
+import { runInThisContext } from 'vm';
 
 export class PostModule extends BasicModule {
     /**
@@ -54,6 +55,8 @@ export class PostModule extends BasicModule {
 
             //Generate New Landing Id
             post.landingPageId = await this.generateNewId(this.newPostId)
+
+            post.pureContent = post.content.replace(/([^<]*>|<)/gmi, '')
 
             //Check If Saved Post Have A Image
             if (files.image) {
@@ -95,7 +98,7 @@ export class PostModule extends BasicModule {
             //Add Id To Current User Document
             if (this.loggedUser?._id)
                 this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
-                    $push: { postsIds: post._id }
+                    $push: { posts: { _id: post._id } }
                 });
 
             //Pass Post Now By Socket To All Language Pages Opne
@@ -118,17 +121,19 @@ export class PostModule extends BasicModule {
             return this.end_failed(this.resource.idIsNotFound);
 
         //Save Pst Image If Passed New
-        if (post.newImage) {
-            post.photoPath = FileService.saveFileSync(post.newImage, "post");
-            if (!post.photoPath)
-                return this.end_failed(this.resource.iCouldNotSaveNewPicture);
-        }
+        // if (post.newImage) {
+        //     post.photoPath = FileService.saveFileSync(post.newImage, "post");
+        //     if (!post.photoPath)
+        //         return this.end_failed(this.resource.iCouldNotSaveNewPicture);
+        // }
 
 
         this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id), userId: new ObjectId(this.loggedUser._id) }, {
             $set: <PostModel>{
                 title: post.title,
                 content: post.content,
+                pureContent: post.content.replace(/([^<]*>|<)/gmi, ''),
+
                 isActive: post.isActive,
                 isPublic: post.isPublic,
                 urls: post.urls,
@@ -147,47 +152,136 @@ export class PostModule extends BasicModule {
             }).catch(this.catchError);
     }
 
+    /**
+    *  If post has vistors i will do th flowing
+    *	-remove all details form post document without title and vistors 
+    *	-in user document in postsids with this post id i will update "isDeleted" property to ture
+    * If post not has any vistors i will do th flowing
+    *	-delete post document from collection
+    *	-delete post id from user postsids in post document
+     * @param id 
+     */
+    delete(id: string): void {
+        this.db.collection(cols.posts).findOne<PostModel>({ _id: new ObjectId(id), userId: new ObjectId(this.loggedUser._id) })
+            .then(post => {
+                if (!post)
+                    return this.end_failed(this.resource.postIsNotFound);
+
+                console.log(post.vistors?.length);
+                console.log(post.vistors);
+
+                if (post.vistors?.length) {
+                    console.log('deletePostDetials');
+                    this.deletePostDetials(post);
+                } else {
+                    console.log('deletePostDocument');
+                    this.deletePostDocument(post);
+                }
+            }).catch(err => this.catchError(err));
+    }
+
+    /**
+    *- If post not has any vistors i will do th flowing
+    *-delete post document from collection
+    *-delete post image from server
+    *-delete post id from user postsids in post document
+    *-delete post id from array love or nolove or favorite from all users
+     * @param id 
+     */
+    private deletePostDocument(post: PostModel): void {
+        //Delete post document from collection
+        this.db.collection(cols.posts).deleteOne({ _id: new ObjectId(post._id), userId: new ObjectId(this.loggedUser._id) }).then(res => {
+            if (!res.deletedCount)
+                return this.end_failed(this.resource.iCantDeleteThePost);
+
+            //Delete post id from user postsids in post document
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $pull: { "posts._id": new ObjectId(post._id) }
+            });
+            //Delete post id from array love or nolove or favorite from all users
+            this.db.collection(cols.users).updateOne({}, {
+                $pull: { "postsLoveIds": new ObjectId(post._id), "postsNotLoveIds": new ObjectId(post._id), "postsFavoriteIds": new ObjectId(post._id) }
+            });
+
+            //Remove Post Image From Server Now
+            FileService.removeFiles(post.photoPath);
+            return this.end_successfully(this.resource.deleted);
+        }).catch(err => this.catchError2(err, this));
+    }
+
+    /**
+     * -remove all details form post document without title and vistors 
+     * -delete post image from server
+     * -in user document in postsids with this post id i will update "isDeleted" property to ture
+     * -delete post id from array love or nolove or favorite from all users
+     * @param id 
+     */
+    private deletePostDetials(post: PostModel): void {
+
+        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id), userId: new ObjectId(this.loggedUser._id) },
+            {
+                $set: {
+                    isDeleted: true
+                },
+                $unset: {
+                    content: true,
+                    languageCode: true,
+                    photoPath: true,
+                    seo: true,
+                    urls: true,
+                    userLoveIds: true,
+                    userNotLoveIds: true,
+                    userFavoriteIds: true,
+                    pureContent: true
+                }
+            }).then(res => {
+                if (!res.modifiedCount)
+                    this.end_failed(this.resource.iCantDeleteThePost);
 
 
+                //In user document in postsids with this post id i will update "isDeleted" property to ture
+                this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                    $set: { "posts.$[v].isDeleted": true }
+                },
+                    { arrayFilters: [{ "v._id": new ObjectId(post._id) }] }
+                );
+
+                //Delete post id from array love or nolove or favorite from all users
+                this.db.collection(cols.users).updateOne({}, {
+                    $pull: { "postsLoveIds": new ObjectId(post._id), "postsNotLoveIds": new ObjectId(post._id), "postsFavoriteIds": new ObjectId(post._id) }
+                });
+
+                //Remove Post Image From Server Now
+                FileService.removeFiles(post.photoPath);
+                return this.end_successfully(this.resource.deleted);
+
+            }).catch(err => this.catchError2(err, this));
+    }
 
     /**
      *  Get Posts For Logged User
      */
     getMyPosts(skip: number, limit: number, filter: PostModel) {
 
-        console.log('filter', filter);
-
         //Filter stage
-        let postFilter: any = { $match: {} };
-
-        //Create New Field With Every Document For Filter In Content
-        let addContentField = {
-            $addFields: {
-                contentText: {
-                    //Remove Any Html Tage From Content
-                    $replaceAll: { input: "$post.content", find: /([^<]*>|<)/gmi, replacement: '00' }
-                }
-            }
-        };
+        let postFilter: any = { $match: { "post.isDeleted": { $in: [false, undefined] } } };
 
         postFilter["$match"]["post.isActive"] = filter.isActive.toString() == 'true' ? true : false;
         postFilter["$match"]["post.isPublic"] = filter.isPublic.toString() == 'true' ? true : false;
-        if (filter.languageCode != 'null') postFilter["$match"]["post.languageCode"] = filter.languageCode;
-        if (filter.url) postFilter["$match"]["post.urls"] = { $in: [filter.url] };
+        if (filter.languageCode && filter.languageCode != 'null') postFilter["$match"]["post.languageCode"] = filter.languageCode;
+        if (filter.url) postFilter["$match"]["post.urls"] = { $in: [new RegExp(filter.url, 'im')] };
         if (filter.title) postFilter["$match"]["post.title"] = { "$regex": filter.title, "$options": "igm" };
-        if (filter.content) postFilter["$match"]["$contentText"] = { "$regex": filter.content, "$options": "igm" };
+        if (filter.content) postFilter["$match"]["post.pureContent"] = { "$regex": filter.content, "$options": "im" };
 
-        console.log('postFilter', postFilter);
 
 
         this.db.collection(cols.users).aggregate<PostModel>
             ([
                 { $match: { _id: new ObjectId(this.loggedUser._id) } },
-                { $lookup: { from: "posts", localField: "postsIds", foreignField: "_id", as: "post" } },
+                { $lookup: { from: "posts", localField: "posts._id", foreignField: "_id", as: "post" } },
                 {
                     $unwind: "$post"
                 },
-                addContentField,
                 postFilter,
                 { $sort: { "post.generatedDate": -1, } },
                 { $skip: skip },
@@ -200,6 +294,7 @@ export class PostModule extends BasicModule {
                         languageCode: "$post.languageCode",
                         isActive: "$post.isActive",
                         isPublic: "$post.isPublic",
+                        urlsCount: {$size:"$post.urls"},
                         counterLove: { $size: "$post.userLoveIds" },
                         counterNotLove: { $size: "$post.userNotLoveIds" },
                         counterFavorite: { $size: "$post.userFavoriteIds" },
@@ -215,6 +310,7 @@ export class PostModule extends BasicModule {
                         return this.end_info(this.resource.noPostsFound)
                     return this.end_info(this.resource.noMorePosts)
                 }
+
 
                 this.end_successfully(this.resource.successfully, res);
             }).catch(eror => this.catchError2(eror, this));
@@ -273,7 +369,7 @@ export class PostModule extends BasicModule {
         let loggedUserId = this.loggedUser?._id;
         this.db.collection(cols.posts).aggregate<PostModel>(
             [
-                { $match: { landingPageId: landingPageId, isActive: true } },
+                { $match: { landingPageId: landingPageId, isDeleted: { $in: [false, undefined] }, isActive: true } },
                 { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "userCreated" } },
                 {
                     $unwind: {
@@ -726,7 +822,7 @@ export class PostModule extends BasicModule {
     * Get Dashbord Information For Current User
     */
     dashbordInfo() {
-        this.db.collection(cols.posts).find<PostModel>({ userId: new ObjectId(this.loggedUser._id) }, { fields: ['isActive', 'isPublic'] }).toArray()
+        this.db.collection(cols.posts).find<PostModel>({ userId: new ObjectId(this.loggedUser._id) }, { fields: { isActive: true, isPublic: true } }).toArray()
             .then(res => {
                 let dash = new DashbordInformation();
                 dash.numberOfPosts = res.length;

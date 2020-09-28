@@ -79,6 +79,8 @@ export interface IResource {
     noVideosFound:string;
     noPostsFound:string;
 
+    iCantDeleteThePost:string;
+    deleted:string;
 
 
 

@@ -1,0 +1,1 @@
+{"version":3,"file":"socket.io.events.const.js","sourceRoot":"","sources":["../../src/consts/socket.io.events.const.ts"],"names":[],"mappings":";;;AAAA,0BAA0B;AACb,QAAA,cAAc,GAAG;IAC1B,eAAe,EAAE,iBAAiB;IAClC,kBAAkB,EAAC,oBAAoB;IACvC,cAAc,EAAE,gBAAgB;CAEnC,CAAA"}

@@ -74,6 +74,10 @@ app.get('/files/:folderName/:fileName', (req: Request, res: Response) => {
   res.sendFile(join(__dirname, `./${req.url}`))
 });
 
+app.get('/',(req,res)=>{
+  res.write('Hello')
+})
+
 //Render User Routers
 app.use('/api/user',userRouter);
 //Render Post Routers

@@ -98,3 +98,5 @@ httpServer.listen(config.port, () => {
   console.log(`Server Working At ${config.port} 
     http://localhost:${config.port}`);
 });
+
+/* "start": "node dist/app.js", */

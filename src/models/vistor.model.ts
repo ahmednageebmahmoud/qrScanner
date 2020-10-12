@@ -16,4 +16,7 @@ export class VistorModel {
 
     loggedUserId:ObjectId|string;
 
+    ip:string;
+
+    countryCode:string;
 }//End Class

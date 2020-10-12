@@ -163,7 +163,6 @@ export class AuthGuardModule extends BasicModule {
             languageCode: userTarget.languageCode,
             // isRememberMe: isRememberMe,//Save For Regenrate If Update Data Or Change Language
             isLoginedByGoogel: isLoginedByGoogel,
-            postDefaultSettings: userTarget.postDefaultSettings,
             fullName:userTarget.fullName||userTarget.userName
         };
     }

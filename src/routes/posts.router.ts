@@ -23,6 +23,12 @@ r.get('/getPostDetails/:id', cont.getPostDetails);
 r.post('/create', AuthGuardService.checkIfAuthrized, cont.create);
 
 
+/** Get Post Detials For Edit : api/post/getPostDetailsForEdit/:landingPageId   */
+r.get('/getPostDetailsForEdit/:landingPageId', AuthGuardService.checkIfAuthrized, cont.getPostDetailsForEdit);
+
+
+
+
 /** Delete Post : api/post/delete/:id   */
 r.delete('/delete/:id', AuthGuardService.checkIfAuthrized, cont.delete);
 
@@ -33,15 +39,11 @@ r.post('/updatePostVistorToActivity/:postId/:vistorId', cont.updatePostVistorToA
 
 
 /** Update Post  : api/post/update*/
-//r.put('/update', AuthGuardService.checkIfAuthrized, cont.update);
+r.put('/update', AuthGuardService.checkIfAuthrized, cont.update);
 
 /** Get Posts For Logged User : api/post/getMyPosts   */
 r.post('/getMyPosts/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getMyPosts);
-
-/** Update Defualt Setting For posts : api/post/updateDefaultSetting/:isApplyOnLastPosts   */
-//r.put('/updateDefultSetting/:isApplyOnLastPosts', AuthGuardService.checkIfAuthrized, cont.updateDefultSetting);
-
-
+ 
 
 /** Current User Remove Love : api/post/remove/love   */
 r.put('/activities/love/remove/:id', AuthGuardService.checkIfAuthrized, cont.removeActivityLove);
@@ -72,5 +74,14 @@ r.get('/activities/notLove/:skip/:limit', AuthGuardService.checkIfAuthrized, con
 
 /** Get Posts Current User Favorite : api/post/activities/favorite/:skip/:limit   */
 r.get('/activities/favorite/:skip/:limit', AuthGuardService.checkIfAuthrized, cont.getPostsActivitiesFavorite);
+
+
+/** Get Post Activities Anlysis: api/post/activities/anlysis/:landingPageId   */
+r.get('/activities/anlysis/:landingPageId', AuthGuardService.checkIfAuthrized, cont.getPostsActivitiesAnlysis);
+
+
+
+
+
 
 export { r as postsRouter }

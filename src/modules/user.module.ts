@@ -7,17 +7,17 @@ import { AuthGuardModule } from "./auth.guard.module";
 import { UserSignInModel } from "../models/user.signIn.model";
 import { TokenPayload, LoginTicket } from "google-auth-library";
 import { FileService } from "../services/file.services";
-import { urlencoded } from "body-parser";
-import { ObjectId } from "mongodb";
-import { StringDecoder } from "string_decoder";
-import { cpus } from "os";
-import { threadId } from "worker_threads";
-import { isRegExp } from "util";
-import { FileSaveingModel } from "../models/file.saveing.model";
+import { FindOneOptions, ObjectId } from "mongodb";
 import { SocketIOService } from "../services/socket.io.service";
-import { SocketIOEvents } from "../consts/socket.io.events.const";
 import { ISocketResponse } from "../interfaces/i.socket.response";
 import { EmailService } from "../services/email.service";
+import { UserService } from "../services/user.service";
+import * as formidable from "formidable";
+import { Hash } from "crypto";
+import { promises } from "fs";
+import { pathToFileURL } from "url";
+import * as path from "path";
+import { log } from "console";
 
 export class UserModule extends BasicModule {
 
@@ -34,64 +34,115 @@ export class UserModule extends BasicModule {
      * Update Account Information
      * @param userInfo 
      */
-    async update(userInfo: UserModel) {
-        let newPicturePath: string;
-        await this.db.collection(cols.users).findOne<UserModel>({ _id: new ObjectId(this.loggedUser._id) }).then(async res => {
-            //Check If Account Is Not Found
-            if (!res) return this.end_unauthorized(this.resource.accountIsNotFound);
+    update() {
 
-            //Check If Email Is A valible
-            if ((userInfo.email != res.email) && await this.db.collection(cols.users).countDocuments({ email: userInfo.email }) > 0)
-                return this.end_failed(this.resource.emailBeforeUsed);
+        let form = new formidable.IncomingForm();
+        let userInfo: UserModel;
+        form.parse(this.req, (formParseError, fields, files) => {
+            //Return Error I Icant Saved Picture
+            if (formParseError)
+                return this.end_failed(this.resource.iCouldNotSaveNewPicture);
 
-            //Save Picture If Passed New
-            if (userInfo.newPicture) {
-                newPicturePath = FileService.saveFileSync(userInfo.newPicture, "user");
-                if (!newPicturePath)
-                    return this.end_failed(this.resource.iCouldNotSaveNewPicture);
-            }
-
-
-            //Update Now
-            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
-                $set:
-                    <UserModel>{
-                        email: userInfo.email,
-                        fullName: userInfo.fullName,
-                        languageCode: userInfo.languageCode,
-                        //نضع مسار الصوة الجديدة اذا فقط تم تغيرها
-                        picturePath: userInfo.newPicture || res.picturePath,
-                        //اذا كان تم تغير الصورة فـ اذا الصورة لم تعد من جوجل
-                        isGoogelPicture: userInfo.newPicture ? false : res.isGoogelPicture,
-                        //اذا تم تغير الاميل فـ اذا الاكونت لم يعد مرتبط بـ جوجب
-                        googelId: (userInfo.email != res.email) ? null : res.googelId,
-                        password: userInfo.password ? StringHashingService.hash(userInfo.password) : res.password,
-                    }
-            }).then(up => {
-
-                if (up.modifiedCount == 0) return this.end_info(this.resource.thereAreNoNewModifications);
-
-
-                //Delete Old Picture From Server
-                FileService.removeFiles(res.picturePath);
-
-                this.end_successfully(this.resource.updated);
-            }).catch(err => this.catchError2(err, this));
-
-        }).catch(err => this.catchError2(err, this));
-
-
-
-
-
+            //Parse Json To Object Now
+            userInfo = fields as unknown as UserModel;
+            this.updateNow(userInfo, files?.image?.path, files?.image?.name);
+        });
     }
 
+    /**
+     * Update User Now In DataBase
+     * @param userInfo 
+     * @param newPictureTepmPath 
+     */
+    updateNow(userInfo: UserModel, newPictureTepmPath: string | null, newPictureName: string | null): void {
+        this.db.collection(cols.users).findOne<UserModel>({ _id: new ObjectId(this.loggedUser._id) }).then(async user => {
+            //Check If User Is Not Found
+            if (!user) {
+                //Remove Temp Picture Id Exsist
+                FileService.removeFiles(newPictureTepmPath);
+                return this.end_failed(this.resource.accountIsNotFound);
+            }
+
+            //Check If User Want Change, Must Be The Email Is Avalibale
+            if ((userInfo.email != user.email) && await this.db.collection(cols.users).countDocuments({ email: userInfo.email }) > 0)
+                return this.end_failed(this.resource.emailBeforeUsed);
+
+            let userUpdate: UserModel = {} as UserModel;
+
+            //Check If User Want Change Password 
+            if (userInfo.newPassword) {
+                //If User Alredy Has Password, Must Be Check If Old Password Mmatched With Current Password Passd From User
+                if (user.password && !StringHashingService.verify(userInfo.password, user.password)) {
+                    //Remove Temp Picture Id Exsist
+                    FileService.removeFiles(newPictureTepmPath);
+                    return this.end_failed(this.resource.currentPasswordIsNotCorrect);
+                }
+
+                //Every Things Good Now Must be Hash New Password And Assign To Password Field To Save 
+                userUpdate.password = StringHashingService.hash(userInfo.newPassword);
+            }
+
+            //Check If User Want Change Profile Picture
+            if (newPictureTepmPath) {
+                userUpdate.picturePath = `/files/users/${user.userName}_${newPictureName.replace(/ /gm, '')}`
+                userUpdate.isGoogelPicture = false;
+            }
+
+            userUpdate._id = user._id;
+            userUpdate.fullName = userInfo.fullName;
+            userUpdate.email = userInfo.email;
+            userUpdate.paypalEmail = userInfo.paypalEmail;
+            userUpdate.phoneNumber = userInfo.phoneNumber;
+            userUpdate.countryId = userInfo.countryId;
+            userUpdate.languageCode = userInfo.languageCode;
+
+
+
+            //Save New Data Now 
+            this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) }, {
+                $set: userUpdate
+            }).then(res => {
+                //Remove Old Picture If Add New And Also Is Not Googel Picture Path And Rename The New Picture
+                if (newPictureTepmPath && !user.isGoogelPicture) {
+                    FileService.removeFiles(path.join(__dirname, '..', user.picturePath));
+                    FileService.rename(newPictureTepmPath, path.join(__dirname, '..', userUpdate.picturePath));
+                }
+
+                userUpdate.userName = user.userName;
+                userUpdate.isHasPassword =( userUpdate.password||user.password) ? true : false;
+                userUpdate.password = null;
+                userUpdate.picturePath = UserService.getUserPicturePath(newPictureTepmPath ? userUpdate : user);
+
+                //Pass The New Information To Front End Now
+                SocketIOService.sendNewUserInformation(this.loggedUser._id, {
+                    newUserInformation: userUpdate
+                } as ISocketResponse);
+                return this.end_successfully(this.resource.updated, userUpdate);
+            }).catch(err => {
+                //Remove Temp Picture Id Exsist
+                FileService.removeFiles(newPictureTepmPath);
+                this.catchError2(err, this)
+            });
+        }).catch(err => {
+            //Remove Temp Picture Id Exsist
+            FileService.removeFiles(newPictureTepmPath);
+            this.catchError2(err, this)
+        });
+    }
+
+    /**Log out From All Pages  */
+logOutFromAllPages():void{
+    //Only Tell All Pages To Log Outh
+       SocketIOService.userLoggedOut(this.loggedUser._id);
+    this.end_successfully();
+}
 
     /**
          * Update Account Information
          * @param userInfo 
          */
     async updateLanguage(userInfo: UserModel) {
+  
         await this.db.collection(cols.users).findOne<UserModel>({ _id: new ObjectId(this.loggedUser._id) }).then(async res => {
             //Check If Account Is Not Found
             if (!res) return this.end_unauthorized(this.resource.accountIsNotFound);
@@ -282,7 +333,7 @@ export class UserModule extends BasicModule {
      * @param email 
      * @param password 
      */
-    resetPasswordAndSignIn(email: string, password: string) {
+    resetPasswordAndSignIn(email: string, password: string): void {
         this.db.collection(cols.users).updateOne({ email: email }, {
             $set: { password: StringHashingService.hash(password) }
         }).then(res => {
@@ -297,6 +348,40 @@ export class UserModule extends BasicModule {
             });
         }).catch(this.catchError);
     }
+
+    /**
+     * Get Current User Information For Update 
+     */
+    getCurrentUserInformationForUpdate(): void {
+        this.db.collection(cols.users).findOne<UserModel>({ _id: new ObjectId(this.loggedUser._id) }, {
+            projection: {
+                fullName: true,
+                userName: true,
+                email: true,
+                paypalEmail: true,
+                phoneNumber: true,
+                countryId: true,
+                password: true,
+                picturePath: true,
+                isGoogelPicture: true,
+                languageCode: true
+            }
+        })
+            .then(user => {
+                if (!user)
+                    return this.end_failed(this.resource.userInformationIsNotDefiend);
+                user.isHasPassword = user.password ? true : false;
+                user.password = null;
+                user.picturePath = UserService.getUserPicturePath(user);
+
+                return this.end_successfully(this.resource.successfully, user);
+            }).catch(this.catchError);
+
+    }
+
+
+
+
 
     /**
      * Generate New User Name

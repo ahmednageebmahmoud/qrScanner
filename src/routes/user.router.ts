@@ -32,6 +32,17 @@ r.put('/update', AuthGuardService.checkIfAuthrized, cont.update);
 r.put('/updateLanguage', AuthGuardService.checkIfAuthrized, cont.updateLanguage);
 
 
+/** User Log out from all pages/user/logOutFromAllPages */
+r.post('/logOutFromAllPages', AuthGuardService.checkIfAuthrized, cont.logOutFromAllPages);
+
+
+
+
+/** Get Current Account Infromation For Update : api/user/getCurrentUserInformationForUpdate */
+r.get('/getCurrentUserInformationForUpdate', AuthGuardService.checkIfAuthrized, cont.getCurrentUserInformationForUpdate);
+
+
+
 
 
 

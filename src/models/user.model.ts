@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb"
 import { ActionModel } from "./action.model";
 import { FileSaveingModel } from "./file.saveing.model";
-import { PostDefaultSettingModel } from "./post.default.setting.model";
+
 import { PostModel } from "./post.model";
 
 export class UserModel {
@@ -23,13 +23,10 @@ export class UserModel {
     picturePath: string;
     /** Is Cuurent 'Picture Path' From Goggel */
     isGoogelPicture: boolean;
-    /** New Picture For Update Picture Account  */
-    newPicture: FileSaveingModel;
+   
     /**Language Code */
     languageCode: string;
-    /**Post Default Settings For Used Deafult When Create Shortner Url  */
-    postDefaultSettings: PostDefaultSettingModel;
-
+ 
     /**All Posts Created By This User */
     posts: PostModel[];
     /**All Posts Loved By This User */
@@ -50,4 +47,17 @@ export class UserModel {
      * Reset Password Code Sent To User Email
      */
     resetPasswordCode: number;
+
+    /**
+     * For Check Is Current User Has Password
+     */
+    isHasPassword:boolean;
+
+    /**
+     * Paypal Email For Recive Payments
+     */
+    paypalEmail:string;
+    phoneNumber:string;
+    countryId:string;
+    newPassword:string;
 }//End Class

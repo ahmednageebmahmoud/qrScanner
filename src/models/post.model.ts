@@ -1,6 +1,5 @@
 import { ObjectId } from "mongodb";
 import { UserModel } from "./user.model";
-import { PostAdvertisemetnModel } from "./post.advertisement.model";
 import { FileSaveingModel } from "./file.saveing.model";
 import { SEOModel } from "./seo.model";
 import { VistorModel } from "./vistor.model";
@@ -31,8 +30,6 @@ export class PostModel {
     isActive: boolean|string;
     /** Is Public : For Display In Posts Page To Any User */
     isPublic: boolean|string;
-    /** Advertisement Setting */
-    advertisement: PostAdvertisemetnModel;
     /** 
      * Post Seo Model
      * سوف يتم ملئها تلقائايا بناء على اول رابط 
@@ -108,5 +105,6 @@ export class PostModel {
     pureContent:string;
 
     isDeleted:boolean;
+    imageDeleted:boolean;
 }
 

@@ -96,6 +96,16 @@ export class PostController {
     }
 
     /**
+     * Get Post Detials For Edit
+     * @param req 
+     * @param res 
+     */
+    getPostDetailsForEdit(req: Request, res: Response) {
+        new PostModule(req, res).getPostDetailsForEdit(req.params.landingPageId);
+    }
+    
+
+    /**
  *  Create New Post 
  * @param req 
  * @param res 
@@ -110,7 +120,7 @@ export class PostController {
      * @param res 
      */
     update(req: Request, res: Response) {
-        new PostModule(req, res).update(<PostModel>req.body);
+        new PostModule(req, res).update();
     }
 
     
@@ -133,18 +143,6 @@ export class PostController {
     }
 
 
-
-    /**
-     * Update Defualt Setting For posts
-     * @param req 
-     * @param res 
-     */
-    updateDefultSetting(req: Request, res: Response) {
-        new PostModule(req, res).updateDefultSetting(req.params.isApplyOnLastPosts, req.body);
-    }
-
-
-
     /**
      * Update Post Vistor To Activity
      * @param req 
@@ -153,9 +151,6 @@ export class PostController {
     updatePostVistorToActivity(req: Request, res: Response) {
         new PostModule(req, res).updatePostVistorToActivity(req.params.postId, req.params.vistorId);
     }
-
-
-
 
     /**
      *  Get Posts Current User Loved
@@ -193,5 +188,12 @@ export class PostController {
     removeActivityFavorite(req: Request, res: Response) {
         new PostModule(req, res).removeActivityFavorite(req.params.id);
     }
+
+    /** Get Post Activities Anlysis   */
+    getPostsActivitiesAnlysis(req: Request, res: Response) {
+        new PostModule(req, res).getPostsActivitiesAnlysis(req.params.landingPageId);
+    }
+    
+
 
 }//End Class

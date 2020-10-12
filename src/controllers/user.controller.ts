@@ -36,9 +36,7 @@ export class UserController {
      * @param req 
      * @param res 
      */
-    update(req: Request, res: Response) {
-        new UserModule(req, res).update(req.body);
-    };
+    update(req: Request, res: Response) { new UserModule(req, res).update(); };
 
 
     /**
@@ -47,9 +45,17 @@ export class UserController {
  * @param res 
  */
     updateLanguage(req: Request, res: Response) {
-        new UserModule(req, res).updateLanguage(req.body);
-    };
+        new UserModule(req, res).updateLanguage(req.body); };
+    
+    /**
+     * Current User Want Logout From All Pages
+     * @param req 
+     * @param res 
+     */
+    logOutFromAllPages(req: Request, res: Response) { new UserModule(req, res).logOutFromAllPages(); };
 
+
+    
 
     /**
 *  Send Secret Code To Emial For Create New Password
@@ -79,6 +85,18 @@ export class UserController {
     resetPasswordAndSignIn(req: Request, res: Response) {
         new UserModule(req, res).resetPasswordAndSignIn(req.params.email, req.params.password);
     };
-    
+
+
+    /**
+     * Get Current User Information For Update
+     * @param req 
+     * @param res 
+     */
+    getCurrentUserInformationForUpdate(req: Request, res: Response) {
+        new UserModule(req, res).getCurrentUserInformationForUpdate();
+    };
+
+
+
 
 }//End Class

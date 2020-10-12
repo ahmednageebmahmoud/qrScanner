@@ -5,9 +5,7 @@ import { PostModel } from '../models/post.model';
 import { ObjectId } from 'mongodb';
 import { config } from '../consts/congif.const';
 import { DashbordInformation } from '../models/dashbord.information';
-import { PostDefaultSettingModel } from '../models/post.default.setting.model';
 import { UserModel } from '../models/user.model';
-import { PostAdvertisemetnModel } from '../models/post.advertisement.model';
 import { FileService } from '../services/file.services';
 import * as formidable from "formidable";
 import * as fs from "fs";
@@ -23,6 +21,7 @@ import { SocketIOEvents } from '../consts/socket.io.events.const';
 import { ISocketResponse } from '../interfaces/i.socket.response';
 import { ActionModel } from '../models/action.model';
 import { runInThisContext } from 'vm';
+import * as  geoip from "geoip-lite";
 
 export class PostModule extends BasicModule {
     /**
@@ -111,45 +110,89 @@ export class PostModule extends BasicModule {
         }).catch(this.catchError);
     }
 
+
+
     /**
-     * 
-     * Update Post 
-     * @param sho 
+     * Update Post
+     * @param post 
      */
-    update(post: PostModel) {
-        if (!post?._id)
-            return this.end_failed(this.resource.idIsNotFound);
+    async update() {
+        let form = new formidable.IncomingForm();
+        let post: PostModel;
 
-        //Save Pst Image If Passed New
-        // if (post.newImage) {
-        //     post.photoPath = FileService.saveFileSync(post.newImage, "post");
-        //     if (!post.photoPath)
-        //         return this.end_failed(this.resource.iCouldNotSaveNewPicture);
-        // }
+        form.parse(this.req, async (formParseError, fields, files) => {
+            //Return Error I Icant Saved Image
+            if (formParseError)
+                return this.end_failed(this.resource.iCouldNotSavePostImage);
 
+            //Parse Json To Object Now
+            post = JSON.parse(fields["postInfo"].toString());
 
-        this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id), userId: new ObjectId(this.loggedUser._id) }, {
-            $set: <PostModel>{
-                title: post.title,
-                content: post.content,
-                pureContent: post.content.replace(/([^<]*>|<)/gmi, ''),
+            post.pureContent = post.content.replace(/([^<]*>|<)/gmi, '')
+            post.content = post.content.replace(/\"/gm, "'");
 
-                isActive: post.isActive,
-                isPublic: post.isPublic,
-                urls: post.urls,
-                advertisement: this.fillAdvertisement(post.advertisement),
-                seo: post.seo
+            //Check If Saved Post Have A Image
+            if (files.image) {
+                //Rename Post Image To Append Landing Page Id To Path
+                post.photoPath = `/files/posts/${post.landingPageId}_${files.image.name.replace(/ /gm, '')}`;
+                fs.rename(files.image.path, path.join(__dirname, '..', post.photoPath), renamePostImageError => {
+                    //Return Error I Cound Not Rename
+                    if (renamePostImageError)
+                        return this.end_failed(this.resource.iCouldNotSavePostImage);
+                    this.updatePost(post, true, true);
+                });
+            } else {
+                this.updatePost(post, post.imageDeleted);
             }
-        })
-            .then(res => {
-                //Check IF Found Post
-                if (res.matchedCount == 0)
-                    return this.end_failed(this.resource.postIsNotFound);
-                else if (res.modifiedCount == 0)
-                    return this.end_info(this.resource.thereAreNoNewModifications);
+        });
+    }
 
-                this.end_successfully(this.resource.updated);
-            }).catch(this.catchError);
+    /**
+     * Update Post Now In DataBase
+     * @param post 
+     * @param ifUpdateingImage 
+     */
+
+    private updatePost(post: PostModel, ifDeleteOldImage: boolean, ifNewImage: boolean = false) {
+        this.db.collection(cols.posts).findOne<PostModel>({ _id: new ObjectId(post._id), userId: new ObjectId(this.loggedUser._id) }).then(po => {
+            if (!po) {
+                //Remove Old Image Affter Saved
+                if (ifNewImage)
+                    FileService.removeFiles(post.photoPath);
+                return this.end_failed(this.resource.postIsNotFound);
+            }
+
+
+            post.photoPath = ifNewImage ? post.photoPath : ifDeleteOldImage ? null : po.photoPath;
+            this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id) }, {
+                $set: {
+                    title: post.title,
+                    content: post.content,
+                    pureContent: post.pureContent,
+                    urls: post.urls,
+                    isActive: post.isActive,
+                    isPublic: post.isPublic,
+                    photoPath: post.photoPath,
+                    languageCode: post.languageCode,
+                }
+            }).then(res => {
+                //Remove New Image Saved
+                if (ifDeleteOldImage)
+                    FileService.removeFiles(po.photoPath);
+                return this.end_successfully(this.resource.postUpdatedSuccessfully);
+            }).catch(eror => {
+                //Remove New Image Saved
+                if (ifNewImage)
+                    FileService.removeFiles(post.photoPath);
+                this.catchError2(eror, this)
+            });
+        }).catch(eror => {
+            this.catchError2(eror, this)
+            //Remove New Image Saved
+            if (ifNewImage)
+                FileService.removeFiles(post.photoPath);
+        });
+
     }
 
     /**
@@ -167,8 +210,6 @@ export class PostModule extends BasicModule {
                 if (!post)
                     return this.end_failed(this.resource.postIsNotFound);
 
-                console.log(post.vistors?.length);
-                console.log(post.vistors);
 
                 if (post.vistors?.length) {
                     console.log('deletePostDetials');
@@ -294,11 +335,12 @@ export class PostModule extends BasicModule {
                         languageCode: "$post.languageCode",
                         isActive: "$post.isActive",
                         isPublic: "$post.isPublic",
-                        urlsCount: {$size:"$post.urls"},
+                        urlsCount: { $size: "$post.urls" },
                         counterLove: { $size: "$post.userLoveIds" },
                         counterNotLove: { $size: "$post.userNotLoveIds" },
                         counterFavorite: { $size: "$post.userFavoriteIds" },
-                        landingPageUrl: { $concat: [config.websiteUrl, "/_", "$post.landingPageId"] }
+                        landingPageUrl: { $concat: [config.websiteUrl, "/_", "$post.landingPageId"] },
+                        landingPageId: "$post.landingPageId"
                     }
                 }
             ])
@@ -327,37 +369,6 @@ export class PostModule extends BasicModule {
     }
 
 
-    /**
-     * 
-     * @param isApplyOnLastPosts For Append This Setting On ALl Last Posts
-     * @param setting New Setting 
-     */
-    updateDefultSetting(isApplyOnLastPosts: string, setting: PostDefaultSettingModel) {
-        //Update Now
-        this.db.collection(cols.users).updateOne({ _id: new ObjectId(this.loggedUser._id) },
-            {
-                $set: <UserModel>{
-                    postDefaultSettings: {
-                        advertisement: this.fillAdvertisement(setting.advertisement),
-                        isPublic: setting.isPublic,
-                    }
-                }
-            }).then(up => {
-                //Updatet All Last Posts
-                if (!isApplyOnLastPosts)
-                    return this.end_successfully(this.resource.updated);
-
-                this.db.collection(cols.posts).updateMany({ userId: new ObjectId(this.loggedUser._id) }, {
-                    $set: <PostModel>{
-                        advertisement: this.fillAdvertisement(setting.advertisement),
-                        isPublic: setting.isPublic,
-                    }
-                }).then(res => {
-                    this.end_successfully(this.resource.updatedPostsCount.replace('num', res.modifiedCount.toString()));
-                }).catch(err => this.catchError2(err, this));
-            }).catch(err => this.catchError2(err, this));
-
-    }
 
     /**
      * Get Post Details 
@@ -415,7 +426,14 @@ export class PostModule extends BasicModule {
                 //Update User Picture Path
                 post.userCreated.picturePath = UserService.getUserPicturePath(post.userCreated);
 
-                post.currentVistor = { _id: new ObjectId(), isMakeActivityWithPost: false } as VistorModel;
+                var geo = geoip.lookup(this.req.ip);
+
+                post.currentVistor = {
+                    _id: new ObjectId(), isMakeActivityWithPost: false,
+                    ip: this.req.ip,
+                    countryCode: geo.country,
+                    loggedUserId: this.loggedUser._id ? new ObjectId(this.loggedUser._id) : null
+                } ;
 
                 //Push New Vistor To Post Vistors Arrays
                 this.db.collection(cols.posts).updateOne({ _id: new ObjectId(post._id) }, {
@@ -423,11 +441,41 @@ export class PostModule extends BasicModule {
                         vistors: post.currentVistor
                     }
                 }).then(re => {
-                    this.end_successfully(this.resource.successfully, post);
-                }).catch(err => this.catchError2(err, this));
+                }).catch(err => { });
+
+                //Pass Id Only
+                post.currentVistor = { _id: post.currentVistor._id } as VistorModel;
+                this.end_successfully(this.resource.successfully, post);
             }).catch(err => this.catchError2(err, this));
     }
 
+
+    /**
+     * Get Post Detials For Edit
+     * @param landingPageId 
+     */
+    getPostDetailsForEdit(landingPageId: string): void {
+
+        this.db.collection(cols.posts).findOne<PostModel>({ landingPageId: landingPageId, userId: new ObjectId(this.loggedUser._id) },
+            {
+                fields: {
+                    title: true,
+                    content: true,
+                    urls: true,
+                    isActive: true,
+                    isPublic: true,
+                    photoPath: true,
+                    languageCode: true,
+                }
+            })
+            .then(post => {
+                if (!post)
+                    return this.end_failed(this.resource.postIsNotFound);
+                post.photoPath = post.photoPath ? (config.apiFullPath + post.photoPath) : null;
+
+                return this.end_successfully(this.resource.successfully, post);
+            }).catch(err => this.catchError2(err, this));
+    }
 
     /**
      * Get Posts
@@ -441,8 +489,9 @@ export class PostModule extends BasicModule {
 
         let matchST: any = {
             $match: {
+                isDeleted: { $in: [false, undefined] },
                 isActive: true,
-                isPublic: true
+                isPublic: true,
             }
         };
 
@@ -480,7 +529,6 @@ export class PostModule extends BasicModule {
                 generatedDate: 1,
                 landingPageId: true,
                 urlsCount: { $size: "$urls" },
-
                 counterLove: { $size: "$userLoveIds" },
                 counterNotLove: { $size: "$userNotLoveIds" },
                 counterFavorite: { $size: "$userFavoriteIds" },
@@ -694,7 +742,7 @@ export class PostModule extends BasicModule {
                     //Add To Love Array
                     $push: { userLoveIds: new ObjectId(this.loggedUser._id) },
                     //Remove From Not Love Array
-                    $pull: { userNotLoveIds: new ObjectId(this.loggedUser._id) }
+                    $pull: { userNotLoveIds: new ObjectId(this.loggedUser._id) },
                 }).then(res => {
                     if (!res.matchedCount)
                         return this.end_failed(this.resource.postIsNotFound);
@@ -735,7 +783,7 @@ export class PostModule extends BasicModule {
                     //Add To Not Love Array
                     $push: { userNotLoveIds: new ObjectId(this.loggedUser._id) },
                     //Remove From Love Array
-                    $pull: { userLoveIds: new ObjectId(this.loggedUser._id) }
+                    $pull: { userLoveIds: new ObjectId(this.loggedUser._id) },
                 }).then(res => {
                     if (!res.matchedCount)
                         return this.end_failed(this.resource.postIsNotFound);
@@ -769,12 +817,16 @@ export class PostModule extends BasicModule {
             //Check If Favorite 
             if (count) {
                 //Un-Favorite
-                shortQuery = { $pull: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
+                shortQuery = {
+                    $pull: { userFavoriteIds: new ObjectId(this.loggedUser._id) },
+                };
                 userQuery = { $pull: { postsFavoriteIds: { targetId: new ObjectId(id) } } }
             }
             else {
                 //Favorite
-                shortQuery = { $push: { userFavoriteIds: new ObjectId(this.loggedUser._id) } };
+                shortQuery = {
+                    $push: { userFavoriteIds: new ObjectId(this.loggedUser._id) },
+                };
                 userQuery = { $push: { postsFavoriteIds: { actionDate: DateTimeService.getDateNowManual, targetId: new ObjectId(id) } } }
             }
             //Update Post
@@ -799,15 +851,8 @@ export class PostModule extends BasicModule {
      * @param vistorId 
      */
     updatePostVistorToActivity(postId: string, vistorId: string): void {
-        let vistor: VistorModel = {
-            _id: new ObjectId(vistorId),
-            isMakeActivityWithPost: true,
-            loggedUserId: this.loggedUser ? new ObjectId(this.loggedUser._id) : null
-            //Another Information Here
-        };
-
         this.db.collection(cols.posts).updateOne({ _id: new ObjectId(postId) }, {
-            $set: { "vistors.$[v]": vistor }
+            $set: { "vistors.$[v].isMakeActivityWithPost": true }
         },
             { arrayFilters: [{ "v._id": new ObjectId(vistorId) }] }
         ).then(res => {
@@ -833,18 +878,6 @@ export class PostModule extends BasicModule {
                 this.end_successfully(this.resource.successfully);
             }).catch(erroe => this.catchError2(erroe, this));
 
-    }
-
-    /**
-     * Fill Advertisement 
-     * @param a 
-     */
-    fillAdvertisement(a: PostAdvertisemetnModel): PostAdvertisemetnModel {
-        return {
-            advertiseingNetworkType: a.advertiseingNetworkType,
-            adsense_pub: a.adsense_pub,
-            adsense_slot: a.adsense_slot
-        };
     }
 
     /**
@@ -920,7 +953,7 @@ export class PostModule extends BasicModule {
     }
 
     /** Current User Remove Not Love    */
-    removeActivityNotLove(id: string) {
+    removeActivityNotLove(id: string): void {
         //Remove User Id From Post Not Loves Arry
         this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, {
             $pull: { "userNotLoveIds": new ObjectId(this.loggedUser._id) }
@@ -935,7 +968,7 @@ export class PostModule extends BasicModule {
     }
 
     /** Current User Remove Favorite   */
-    removeActivityFavorite(id: string) {
+    removeActivityFavorite(id: string): void {
         //Remove User Id From Post Favorites Arry
         this.db.collection(cols.posts).updateOne({ _id: new ObjectId(id) }, {
             $pull: { "userFavoriteIds": new ObjectId(this.loggedUser._id) }
@@ -951,5 +984,22 @@ export class PostModule extends BasicModule {
         }).catch(c => this.catchError(c));
     }
 
+    /** Get Post Activities Anlysis   */
+
+    getPostsActivitiesAnlysis(landingPostId: string): void {
+        this.db.collection(cols.posts).aggregate<PostModel>(
+            [{ $match: { landingPageId: landingPostId, userId: new ObjectId(this.loggedUser._id) } },
+            {
+                $project: {
+                    counterLove: { $size: "$userLoveIds" },
+                    counterNotLove: { $size: "$userNotLoveIds" },
+                    counterFavorite: { $size: "$userFavoriteIds" }
+                }
+            }]).toArray().then(posts => {
+                if (!posts.length) return this.end_failed(this.resource.postIsNotFound);
+                return this.end_successfully(this.resource.successfully, posts[0]);
+            }).catch(c => this.catchError(c));
+
+    }
 
 }//End Class

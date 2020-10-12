@@ -15,7 +15,7 @@ export class FileService {
             let dateTimeNow: number = Date.now();
             let savedFilePath = `/files/${foldersNames.join("/")}/${dateTimeNow}_${fileSaveingModel.fileName}`;
 
-            
+
             //Save New Image
             fs.writeFileSync(path.join(__dirname, `../${savedFilePath}`), imageDecoded);
 
@@ -36,6 +36,22 @@ export class FileService {
             fs.unlink(path.join(__dirname, `../${pa}`), (errorRemoveImage) => { });
         });
     }
+
+
+    /**
+     * Rename File
+     * @param oldPath 
+     * @param newPath 
+     */
+    static rename(oldPath: string, newPath: string): void {
+        
+        if (!oldPath || !newPath) return;
+        fs.rename(oldPath, newPath, (errorRenameImage) => { 
+            console.log('Error Rename Image ',errorRenameImage);
+            
+        });
+    }
+
 
 
 }//End Class

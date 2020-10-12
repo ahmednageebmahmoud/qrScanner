@@ -1,3 +1,4 @@
+import { SrvRecord } from "dns";
 import { ServerResponse } from "http";
 
 export interface IResource {
@@ -81,7 +82,9 @@ export interface IResource {
 
     iCantDeleteThePost:string;
     deleted:string;
-
-
+    postUpdatedSuccessfully:string;
+    userInformationIsNotDefiend:string;
+    userAccountIsNotFound:string;
+    currentPasswordIsNotCorrect:string;
 
 }

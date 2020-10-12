@@ -65,27 +65,22 @@ export class ResourceEn implements IResource {
 
     codeSentSuccessfully = "Code Sent Successfully";
     iCanNotSendCodeToYoureEmail = "I Can Not Send Code To Youre Email";
-
     codeIsInvalid = "Code Is Invalid";
     codeIsValid = "Code Is Valid";
     removedVideoFromFavoriteList = "Remov Video From Favorite List";
     removedVideoFromNotLoveList = "Remov Video From Not Love List";
     removedVideoFromLoveList = "Removed Video From Love List";
     noMoreVideos = "No More Of Videos";
-
-
     removedPostFromFavoriteList = "Remov Post From Favorite List";
     removedPostFromNotLoveList = "Remov Post From Not Love List";
     removedPostFromLoveList = "Removed Post From Love List";
-
-
-
     noVideosFound = "No Videos Found";
     noPostsFound = "No Posts Found";
-
     iCantDeleteThePost = 'I Cant Not Delete The Post';
     deleted = 'Deleted';
-
-
+    postUpdatedSuccessfully = 'Post Updated Successfully';
+    userInformationIsNotDefiend = 'User Information Is Not Defiend';
+    userAccountIsNotFound = 'User Account Is Not Found';
+    currentPasswordIsNotCorrect='Current Password Is Not Correct';
 
 }//End Class

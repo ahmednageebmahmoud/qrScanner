@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { PostModel } from "../models/post.model";
+import { UserModel } from "../models/user.model";
 
 /**
  * I Socket Response
@@ -42,5 +43,8 @@ export interface ISocketResponse {
    * New Publish Post
    */
   newPost:PostModel;
+
+  /**Use When User Update His Information */
+  newUserInformation:UserModel;
 
 }//End Interface

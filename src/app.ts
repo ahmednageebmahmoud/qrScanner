@@ -29,9 +29,11 @@ app.use(expres.urlencoded({
   extended: true
 }));
 app.use(expres.json({ limit: '100mb' }));
+app.set('trust proxy',true);
 
 //Set Defualt For Any Request 
 app.use((req: Request, res: Response, next: NextFunction) => {
+  
 
   // Website you wish to allow to connect
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,10 +46,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // var geoip = require('geoip-lite');
  
-  // var ip = "207.97.227.239";
-  // var geo = geoip.lookup(ip);
-  // console.log(geo);
-  
   
 
   // Set to true if you need the website to include cookies in the requests sent

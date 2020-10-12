@@ -13,12 +13,14 @@ export class SocketIOService {
 
     /** Init Socet Io  */
     init(httpServer: Server): void {
+        console.log('I Will Init');
+        
         const socketIOServer = socketIO(httpServer, {
             cookie: false,
             //   origins:config.websiteUrl//<< Web Site Target
         });
         //On Connect Event
-        //socketIOServer.on("connect", this.onConnect);
+        socketIOServer.on("connect", this.onConnect);
         SocketIOService.socketServer = socketIOServer;
     }
 
@@ -32,24 +34,8 @@ export class SocketIOService {
         //soc.on(SocketIOEvents.video_favorite, this.onVideoFavorite);
     }
 
-    /** 
-     * On Video Love
-     */
-    private onVideoLove(ms: ISocketResponse): void {
-        console.log('Video New Love', ms);
-    }
-    /** 
-       * On Video Not Love
-       */
-    private onVideoNotLove(ms: ISocketResponse): void {
-        console.log('Video New Not Love', ms);
-    }
-    /** 
-       * On Video Favorite
-       */
-    private onVideoFavorite(ms: ISocketResponse): void {
-        console.log('Video New Favorite', ms);
-    }
+
+
 
     /**
      * Send Video New Action To Clinets Only For Thw Video Room Becuse Not Send To Users Play Target Video
@@ -68,6 +54,14 @@ export class SocketIOService {
         this.socketServer.sockets.emit(`${SocketIOEvents.userChangeLanguage}/${userId}`, data);
     }
 
+    /**
+        * Send This New User Information For Update In All Pages 
+        * @param videoId 
+        */
+    static sendNewUserInformation(userId: ObjectId , data: ISocketResponse): void {
+        this.socketServer.sockets.emit(`${SocketIOEvents.userUpdatedInformation}/${userId}`, data);
+    }
+
 
     /**
      * Send The Publish Post Right Now
@@ -76,6 +70,16 @@ export class SocketIOService {
     static sendNewPostPublish(languageCodeTarget: string, data: ISocketResponse): void {
         this.socketServer.sockets.emit(`${SocketIOEvents.publishNewPost}/${languageCodeTarget}`, data);
     }
+
+
+    /** Tell All Pages To Log Out  To Spscif User */
+
+    static userLoggedOut(userId: ObjectId): void {
+        this.socketServer.sockets.emit(`${SocketIOEvents.userLoggedOut}/${userId}`);
+    }
+    
+
+
 
 
 }//End Class

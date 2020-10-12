@@ -86,10 +86,12 @@ export class ResourceAr implements IResource {
 
     iCantDeleteThePost='لم اتمكن من حذف هذا الموضوع';
     deleted='تم الحذف';
+    postUpdatedSuccessfully='تم التحديث الموضوع بنجاح';
 
 
-
-
+    userInformationIsNotDefiend='لم يتم العثور على بيانات المستخدم';
+    userAccountIsNotFound='لم  يتم العثور على المستخدم';
+    currentPasswordIsNotCorrect='كلمة السر الحالية ليست صحيحة';
 
 
 

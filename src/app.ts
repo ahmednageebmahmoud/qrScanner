@@ -73,7 +73,8 @@ app.get('/files/:folderName/:fileName', (req: Request, res: Response) => {
 });
 
 app.get('/',(req,res)=>{
-  res.write('Hello')
+  res.write('Hello');
+  res.end()
 })
 
 //Render User Routers
